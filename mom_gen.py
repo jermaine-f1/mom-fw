@@ -4,10 +4,13 @@ CIO Momentum Dashboard - Real Data Generator
 Run this locally to fetch live Yahoo Finance data and generate the dashboard.
 
 Usage:
-    pip install yfinance pandas numpy
+    pip install yfinance pandas numpy scipy
     python generate_cio_dashboard.py
 
-Output: cio_momentum_dashboard_live.html
+Input:  mapping.csv (in same folder as this script)
+        Columns: Name, Symbol, Region, Category, Subcategory, High Vol
+        
+Output: index.html
 """
 
 import yfinance as yf
@@ -16,77 +19,95 @@ import numpy as np
 from datetime import datetime, timedelta
 from scipy import stats
 import json
+import os
 import warnings
 warnings.filterwarnings('ignore')
 
 # ============== CONFIGURATION ==============
-ETF_UNIVERSE = [
-    # US Equities
-    "SPY", "QQQ", "IWM", "DIA", "MDY", "RSP",
-    # Technology
-    "XLK", "SMH", "SOXX", "IGV",
-    # Financials
-    "XLF", "KRE", "KBE",
-    # Healthcare
-    "XLV", "XBI", "IBB",
-    # Energy
-    "XLE", "OIH", "XOP",
-    # Other Sectors
-    "XLI", "XLY", "XLP", "XLU", "XLB", "XLRE",
-    # International Developed
-    "EFA", "VEA", "IEFA",
-    # Emerging Markets
-    "EEM", "VWO", "INDA", "EWZ", "FXI", "EWY", "EWT", "EWJ",
-    # Commodities
-    "GLD", "SLV", "GDX", "GDXJ", "SIL", "COPX", "URA",
-    # Clean Energy
-    "TAN", "ICLN",
-    # Fixed Income
-    "TLT", "IEF", "LQD", "HYG",
-    # Real Estate
-    "VNQ", "IYR",
-    # Dividend
-    "SCHD", "VIG", "VYM", "DVY",
-    # Thematic
-    "ARKK", "ARKG", "JETS",
-]
-
-SECTOR_MAP = {
-    'SPY': 'US Equity', 'QQQ': 'US Tech', 'IWM': 'US Small', 'DIA': 'US Equity', 'MDY': 'US Mid', 'RSP': 'US Equal',
-    'XLK': 'Tech', 'SMH': 'Semis', 'SOXX': 'Semis', 'IGV': 'Software',
-    'XLF': 'Financials', 'KRE': 'Reg Banks', 'KBE': 'Banks',
-    'XLV': 'Healthcare', 'XBI': 'Biotech', 'IBB': 'Biotech',
-    'XLE': 'Energy', 'OIH': 'Oil Svc', 'XOP': 'E&P',
-    'XLI': 'Industrials', 'XLY': 'Cons Disc', 'XLP': 'Cons Staples', 'XLU': 'Utilities', 'XLB': 'Materials', 'XLRE': 'Real Estate',
-    'EFA': 'Intl Dev', 'VEA': 'Intl Dev', 'IEFA': 'Intl Dev',
-    'EEM': 'EM Broad', 'VWO': 'EM Broad', 'INDA': 'India', 'EWZ': 'Brazil', 'FXI': 'China', 'EWY': 'Korea', 'EWT': 'Taiwan', 'EWJ': 'Japan',
-    'GLD': 'Gold', 'SLV': 'Silver', 'GDX': 'Gold Miners', 'GDXJ': 'Jr Gold', 'SIL': 'Silver Miners', 'COPX': 'Copper', 'URA': 'Uranium',
-    'TAN': 'Solar', 'ICLN': 'Clean Energy',
-    'TLT': 'Long Treas', 'IEF': 'Med Treas', 'LQD': 'IG Corp', 'HYG': 'High Yield',
-    'VNQ': 'REITs', 'IYR': 'REITs',
-    'SCHD': 'Dividend', 'VIG': 'Div Growth', 'VYM': 'High Div', 'DVY': 'Dividend',
-    'ARKK': 'Innovation', 'ARKG': 'Genomics', 'JETS': 'Airlines',
-}
-
-COUNTRY_MAP = {
-    'SPY': 'US', 'QQQ': 'US', 'IWM': 'US', 'DIA': 'US', 'MDY': 'US', 'RSP': 'US',
-    'XLK': 'US', 'SMH': 'US', 'SOXX': 'US', 'IGV': 'US',
-    'XLF': 'US', 'KRE': 'US', 'KBE': 'US',
-    'XLV': 'US', 'XBI': 'US', 'IBB': 'US',
-    'XLE': 'US', 'OIH': 'US', 'XOP': 'US',
-    'XLI': 'US', 'XLY': 'US', 'XLP': 'US', 'XLU': 'US', 'XLB': 'US', 'XLRE': 'US',
-    'EFA': 'Multi', 'VEA': 'Multi', 'IEFA': 'Multi',
-    'EEM': 'Multi', 'VWO': 'Multi',
-    'INDA': 'India', 'EWZ': 'Brazil', 'FXI': 'China', 'EWY': 'Korea', 'EWT': 'Taiwan', 'EWJ': 'Japan',
-    'GLD': 'Global', 'SLV': 'Global', 'GDX': 'Global', 'GDXJ': 'Global', 'SIL': 'Global', 'COPX': 'Global', 'URA': 'Global',
-    'TAN': 'Global', 'ICLN': 'Global',
-    'TLT': 'US', 'IEF': 'US', 'LQD': 'US', 'HYG': 'US',
-    'VNQ': 'US', 'IYR': 'US',
-    'SCHD': 'US', 'VIG': 'US', 'VYM': 'US', 'DVY': 'US',
-    'ARKK': 'US', 'ARKG': 'US', 'JETS': 'US',
-}
-
 RISK_FREE_RATE = 0.045  # Current ~4.5%
+
+
+def clean_symbol(symbol):
+    """Clean symbol for Yahoo Finance compatibility"""
+    if pd.isna(symbol):
+        return None
+    
+    symbol = str(symbol).strip()
+    
+    # Map of exchange suffixes to Yahoo Finance format
+    # Most US exchanges (.O, .K) just need the suffix removed
+    # Some international need different handling
+    suffix_map = {
+        '.O': '',      # NASDAQ
+        '.K': '',      # NYSE Arca
+        '.TO': '.TO',  # Toronto (keep)
+        '.HK': '.HK',  # Hong Kong (keep)
+        '.MI': '.MI',  # Milan (keep)
+        '.WA': '.WA',  # Warsaw (keep)
+        '.NS': '.NS',  # NSE India (keep)
+        '.BO': '.BO',  # BSE India (keep)
+        '.HM': '',     # Vietnam - may not work
+        '.HNO': '',    # Vietnam - may not work
+    }
+    
+    for suffix, replacement in suffix_map.items():
+        if symbol.endswith(suffix):
+            base = symbol[:-len(suffix)]
+            return base + replacement
+    
+    return symbol
+
+
+def load_etf_universe(csv_path):
+    """Load ETF universe from CSV file (mapping.csv format)"""
+    print(f"📂 Loading universe from: {csv_path}")
+    
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"❌ File not found: {csv_path}")
+    
+    # Read CSV, handle BOM if present
+    df = pd.read_csv(csv_path, encoding='utf-8-sig')
+    
+    # Validate required columns
+    required_cols = ['Symbol', 'Region', 'Subcategory']
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        raise ValueError(f"CSV missing required columns: {missing}. Found: {list(df.columns)}")
+    
+    # Clean symbols and remove duplicates
+    df['CleanSymbol'] = df['Symbol'].apply(clean_symbol)
+    df = df.dropna(subset=['CleanSymbol'])
+    df = df.drop_duplicates(subset=['CleanSymbol'], keep='first')
+    
+    # Build lists and maps
+    tickers = df['CleanSymbol'].tolist()
+    
+    # Use Subcategory as sector (more specific), Region as country
+    sector_map = dict(zip(df['CleanSymbol'], df['Subcategory']))
+    country_map = dict(zip(df['CleanSymbol'], df['Region']))
+    
+    # Also build name map for display
+    name_map = {}
+    if 'Name' in df.columns:
+        name_map = dict(zip(df['CleanSymbol'], df['Name']))
+    
+    # Build high vol map
+    highvol_map = {}
+    if 'High Vol' in df.columns:
+        highvol_map = dict(zip(df['CleanSymbol'], df['High Vol'].astype(str).str.upper() == 'TRUE'))
+    
+    # Build category map (ETF vs Equities)
+    category_map = {}
+    if 'Category' in df.columns:
+        category_map = dict(zip(df['CleanSymbol'], df['Category']))
+    
+    print(f"✓ Loaded {len(tickers)} unique symbols")
+    
+    # Count ETFs vs non-ETFs
+    etf_count = sum(1 for t in tickers if category_map.get(t, '').upper() == 'ETF')
+    print(f"  → {etf_count} ETFs, {len(tickers) - etf_count} Equities/Other")
+    
+    return tickers, sector_map, country_map, name_map, highvol_map, category_map
 
 
 def fetch_data(tickers):
@@ -103,7 +124,7 @@ def fetch_data(tickers):
         return None
 
 
-def calculate_metrics(prices, ticker):
+def calculate_metrics(prices, ticker, sector_map, country_map, name_map=None, category_map=None):
     """Calculate all momentum metrics for a single ETF"""
     try:
         prices = prices.dropna()
@@ -167,11 +188,20 @@ def calculate_metrics(prices, ticker):
         drawdown = (cumulative / running_max) - 1
         max_dd = drawdown.min() * 100
         
+        # Get name from map or use ticker
+        name = name_map.get(ticker, ticker) if name_map else ticker
+        
+        # Determine if ETF
+        category = category_map.get(ticker, '') if category_map else ''
+        is_etf = category.upper() == 'ETF' or category.upper() == 'CASH'
+        
         return {
             'ticker': ticker,
-            'name': ticker,  # Could fetch full name if needed
-            'sector': SECTOR_MAP.get(ticker, 'Other'),
-            'country': COUNTRY_MAP.get(ticker, 'Other'),
+            'name': name,
+            'sector': sector_map.get(ticker, 'Other'),
+            'country': country_map.get(ticker, 'Other'),
+            'category': category,
+            'isETF': is_etf,
             'price': round(current_price, 2),
             'return6m': round(return_6m, 2),
             'sortino': round(sortino, 2),
@@ -334,6 +364,41 @@ def generate_html(etf_data, correlations, generation_date):
     <div id="tab-signals" class="tab-content hidden">
       <div class="space-y-6">
         
+        <!-- Filter Controls -->
+        <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+          <div class="flex flex-wrap items-center gap-4 mb-4">
+            <span class="text-sm text-slate-400 font-medium">Filters:</span>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="etf-only-toggle" class="w-5 h-5 rounded" checked onchange="applyFilters()">
+              <span class="text-sm">ETFs Only</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="buy-only-toggle" class="w-5 h-5 rounded" onchange="applyFilters()">
+              <span class="text-sm">BUY Signals Only</span>
+            </label>
+            <div class="ml-auto text-sm text-slate-500">
+              Showing: <span id="filter-count" class="text-indigo-400 font-bold">0</span> / <span id="total-count">0</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-4">
+            <span class="text-sm text-slate-400 font-medium">Search:</span>
+            <input type="text" id="search-input" placeholder="Symbol, sector, region..." 
+                   class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:border-indigo-500"
+                   oninput="applyFilters()">
+            <span class="text-sm text-slate-400 font-medium ml-4">Region:</span>
+            <select id="region-filter" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500" onchange="applyFilters()">
+              <option value="">All Regions</option>
+            </select>
+            <span class="text-sm text-slate-400 font-medium ml-4">Sector:</span>
+            <select id="sector-filter" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500" onchange="applyFilters()">
+              <option value="">All Sectors</option>
+            </select>
+            <button onclick="clearFilters()" class="ml-auto px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">
+              ✕ Clear Filters
+            </button>
+          </div>
+        </div>
+        
         <!-- Summary Cards -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="signal-summary">
           <!-- Filled by JS -->
@@ -341,23 +406,45 @@ def generate_html(etf_data, correlations, generation_date):
 
         <!-- Signals Table -->
         <div class="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
-          <div class="p-4 border-b border-slate-800">
-            <h3 class="font-bold">All ETFs Ranked by Quality Score</h3>
+          <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+            <h3 class="font-bold">All Instruments Ranked by Quality Score</h3>
+            <span class="text-xs text-slate-500">Click column headers to sort</span>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
                 <tr class="bg-slate-800 text-slate-400 text-xs uppercase">
                   <th class="px-3 py-2 text-left">#</th>
-                  <th class="px-3 py-2 text-left">ETF</th>
-                  <th class="px-3 py-2 text-left">Region</th>
-                  <th class="px-3 py-2 text-center">Signal</th>
-                  <th class="px-3 py-2 text-right">Score</th>
-                  <th class="px-3 py-2 text-right">6M Ret</th>
-                  <th class="px-3 py-2 text-right">Sortino</th>
-                  <th class="px-3 py-2 text-right">Wks↓</th>
-                  <th class="px-3 py-2 text-right">Z</th>
-                  <th class="px-3 py-2 text-center">MA</th>
+                  <th class="px-3 py-2 text-left cursor-pointer hover:text-white select-none" onclick="sortTable('ticker')">
+                    Symbol <span id="sort-ticker" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-left cursor-pointer hover:text-white select-none" onclick="sortTable('isETF')">
+                    Type <span id="sort-isETF" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-left cursor-pointer hover:text-white select-none" onclick="sortTable('country')">
+                    Region <span id="sort-country" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-center cursor-pointer hover:text-white select-none" onclick="sortTable('signal')">
+                    Signal <span id="sort-signal" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('score')">
+                    Score <span id="sort-score" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('return6m')">
+                    6M Ret <span id="sort-return6m" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('sortino')">
+                    Sortino <span id="sort-sortino" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('weeksDown')">
+                    Wks↓ <span id="sort-weeksDown" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('zScore')">
+                    Z <span id="sort-zScore" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-center cursor-pointer hover:text-white select-none" onclick="sortTable('maQuality')">
+                    MA <span id="sort-maQuality" class="text-indigo-400"></span>
+                  </th>
                 </tr>
               </thead>
               <tbody id="signals-table">
@@ -805,6 +892,123 @@ def generate_html(etf_data, correlations, generation_date):
     }}
 
     let rankedETFs = etfUniverse.map(calculateScore).sort((a, b) => b.score - a.score);
+    let filteredETFs = rankedETFs;
+    let currentSort = {{ column: 'score', direction: 'desc' }};
+
+    // Initialize filter dropdowns
+    function initFilterDropdowns() {{
+      const regions = [...new Set(etfUniverse.map(e => e.country))].sort();
+      const sectors = [...new Set(etfUniverse.map(e => e.sector))].sort();
+      
+      const regionSelect = document.getElementById('region-filter');
+      regions.forEach(r => {{
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = r;
+        regionSelect.appendChild(opt);
+      }});
+      
+      const sectorSelect = document.getElementById('sector-filter');
+      sectors.forEach(s => {{
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        sectorSelect.appendChild(opt);
+      }});
+    }}
+
+    // Clear all filters
+    function clearFilters() {{
+      document.getElementById('etf-only-toggle').checked = true;
+      document.getElementById('buy-only-toggle').checked = false;
+      document.getElementById('search-input').value = '';
+      document.getElementById('region-filter').value = '';
+      document.getElementById('sector-filter').value = '';
+      applyFilters();
+    }}
+
+    // Filter functions
+    function applyFilters() {{
+      const etfOnly = document.getElementById('etf-only-toggle').checked;
+      const buyOnly = document.getElementById('buy-only-toggle').checked;
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+      const regionFilter = document.getElementById('region-filter').value;
+      const sectorFilter = document.getElementById('sector-filter').value;
+      
+      filteredETFs = rankedETFs.filter(e => {{
+        if (etfOnly && !e.isETF) return false;
+        if (buyOnly && e.signal !== 'BUY') return false;
+        if (regionFilter && e.country !== regionFilter) return false;
+        if (sectorFilter && e.sector !== sectorFilter) return false;
+        if (searchTerm) {{
+          const searchFields = [e.ticker, e.name, e.sector, e.country].join(' ').toLowerCase();
+          if (!searchFields.includes(searchTerm)) return false;
+        }}
+        return true;
+      }});
+      
+      // Apply current sort
+      sortFilteredETFs();
+      renderSignals();
+      updatePortfolio();
+    }}
+
+    // Sort functions
+    function sortTable(column) {{
+      // Toggle direction if same column, otherwise default to desc for numbers, asc for strings
+      if (currentSort.column === column) {{
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+      }} else {{
+        currentSort.column = column;
+        // Default sort direction based on column type
+        const numericColumns = ['score', 'return6m', 'sortino', 'weeksDown', 'zScore', 'maQuality'];
+        currentSort.direction = numericColumns.includes(column) ? 'desc' : 'asc';
+      }}
+      
+      sortFilteredETFs();
+      renderSignals();
+    }}
+
+    function sortFilteredETFs() {{
+      const {{ column, direction }} = currentSort;
+      const signalOrder = {{ 'BUY': 0, 'REDUCE': 1, 'HOLD': 2, 'SELL': 3 }};
+      
+      filteredETFs.sort((a, b) => {{
+        let valA = a[column];
+        let valB = b[column];
+        
+        // Special handling for signal column
+        if (column === 'signal') {{
+          valA = signalOrder[valA] ?? 4;
+          valB = signalOrder[valB] ?? 4;
+        }}
+        
+        // Handle booleans
+        if (typeof valA === 'boolean') {{
+          valA = valA ? 1 : 0;
+          valB = valB ? 1 : 0;
+        }}
+        
+        // Handle strings
+        if (typeof valA === 'string') {{
+          valA = valA.toLowerCase();
+          valB = valB.toLowerCase();
+        }}
+        
+        let result = 0;
+        if (valA < valB) result = -1;
+        if (valA > valB) result = 1;
+        
+        return direction === 'asc' ? result : -result;
+      }});
+      
+      // Update sort indicators
+      document.querySelectorAll('[id^="sort-"]').forEach(el => el.textContent = '');
+      const indicator = document.getElementById(`sort-${{column}}`);
+      if (indicator) {{
+        indicator.textContent = direction === 'asc' ? '↑' : '↓';
+      }}
+    }}
 
     // Tab switching
     function showTab(tabId) {{
@@ -824,9 +1028,13 @@ def generate_html(etf_data, correlations, generation_date):
 
     // Render signals
     function renderSignals() {{
-      const buyCount = rankedETFs.filter(e => e.signal === 'BUY').length;
-      const sellCount = rankedETFs.filter(e => e.signal === 'SELL').length;
-      const holdCount = rankedETFs.filter(e => e.signal === 'HOLD' || e.signal === 'REDUCE').length;
+      const buyCount = filteredETFs.filter(e => e.signal === 'BUY').length;
+      const sellCount = filteredETFs.filter(e => e.signal === 'SELL').length;
+      const holdCount = filteredETFs.filter(e => e.signal === 'HOLD' || e.signal === 'REDUCE').length;
+
+      // Update filter counts
+      document.getElementById('filter-count').textContent = filteredETFs.length;
+      document.getElementById('total-count').textContent = rankedETFs.length;
 
       document.getElementById('signal-summary').innerHTML = `
         <div class="bg-emerald-900/30 border border-emerald-700/50 rounded-lg p-4 text-center">
@@ -842,13 +1050,13 @@ def generate_html(etf_data, correlations, generation_date):
           <div class="text-sm text-slate-400">HOLD/REDUCE</div>
         </div>
         <div class="bg-slate-800 rounded-lg p-4 text-center">
-          <div class="text-3xl font-bold text-indigo-400">${{rankedETFs.length}}</div>
-          <div class="text-sm text-slate-400">Universe</div>
+          <div class="text-3xl font-bold text-indigo-400">${{filteredETFs.length}}</div>
+          <div class="text-sm text-slate-400">Showing</div>
         </div>
       `;
 
       const tbody = document.getElementById('signals-table');
-      tbody.innerHTML = rankedETFs.map((etf, i) => {{
+      tbody.innerHTML = filteredETFs.map((etf, i) => {{
         const signalColors = {{
           BUY: 'bg-emerald-900/50 text-emerald-400 border-emerald-500/50',
           SELL: 'bg-red-900/50 text-red-400 border-red-500/50',
@@ -856,6 +1064,8 @@ def generate_html(etf_data, correlations, generation_date):
           REDUCE: 'bg-orange-900/50 text-orange-400 border-orange-500/50'
         }};
         const rowBg = etf.signal === 'BUY' ? 'bg-emerald-900/10' : etf.signal === 'SELL' ? 'bg-red-900/10' : '';
+        const typeLabel = etf.isETF ? 'ETF' : 'Stock';
+        const typeColor = etf.isETF ? 'text-cyan-400' : 'text-amber-400';
         
         return `
           <tr class="border-t border-slate-800 ${{rowBg}}">
@@ -864,6 +1074,7 @@ def generate_html(etf_data, correlations, generation_date):
               <div class="font-bold">${{etf.ticker}}</div>
               <div class="text-xs text-slate-500">${{etf.sector}}</div>
             </td>
+            <td class="px-3 py-2 text-xs ${{typeColor}}">${{typeLabel}}</td>
             <td class="px-3 py-2 text-xs text-slate-400">${{etf.country}}</td>
             <td class="px-3 py-2 text-center">
               <span class="px-2 py-1 rounded text-xs font-bold border ${{signalColors[etf.signal]}}">${{etf.signal}}</span>
@@ -891,7 +1102,7 @@ def generate_html(etf_data, correlations, generation_date):
       document.getElementById('maxWeightVal').textContent = maxWt + '%';
       document.getElementById('maxCorrVal').textContent = maxCorr.toFixed(2);
 
-      const buySignals = rankedETFs.filter(e => e.signal === 'BUY');
+      const buySignals = filteredETFs.filter(e => e.signal === 'BUY');
       const portfolio = [];
 
       for (const etf of buySignals) {{
@@ -1044,8 +1255,7 @@ def generate_html(etf_data, correlations, generation_date):
 
     function applySettings() {{
       rankedETFs = etfUniverse.map(calculateScore).sort((a, b) => b.score - a.score);
-      renderSignals();
-      updatePortfolio();
+      applyFilters();  // This will update filteredETFs and call renderSignals + updatePortfolio
     }}
 
     function resetSettings() {{
@@ -1076,8 +1286,8 @@ def generate_html(etf_data, correlations, generation_date):
     }}
 
     // Initialize
-    renderSignals();
-    updatePortfolio();
+    initFilterDropdowns();
+    applyFilters();  // This sets filteredETFs and renders
     updateConfigSummary();
   </script>
 </body>
@@ -1091,22 +1301,30 @@ def main():
     print("📊 CIO Momentum Dashboard Generator")
     print("=" * 60)
     
+    # Get the directory where the script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    csv_path = os.path.join(script_dir, "mapping.csv")
+    
+    # Load universe from CSV
+    tickers, sector_map, country_map, name_map, highvol_map, category_map = load_etf_universe(csv_path)
+    
     # Fetch data
-    prices = fetch_data(ETF_UNIVERSE)
+    prices = fetch_data(tickers)
     if prices is None:
         return
     
-    # Calculate metrics for each ETF
+    # Calculate metrics for each ticker
     print("\n📈 Calculating metrics...")
     etf_data = []
-    for ticker in ETF_UNIVERSE:
+    for ticker in tickers:
         if ticker in prices.columns:
-            metrics = calculate_metrics(prices[ticker], ticker)
+            metrics = calculate_metrics(prices[ticker], ticker, sector_map, country_map, name_map, category_map)
             if metrics:
                 etf_data.append(metrics)
-                print(f"  ✓ {ticker}: {metrics['return6m']:+.1f}% | Sortino: {metrics['sortino']:.2f} | Z: {metrics['zScore']:.2f}")
+                etf_label = "ETF" if metrics['isETF'] else "EQ"
+                print(f"  ✓ {ticker} [{etf_label}]: {metrics['return6m']:+.1f}% | Sortino: {metrics['sortino']:.2f} | Z: {metrics['zScore']:.2f}")
     
-    print(f"\n✓ Processed {len(etf_data)} ETFs")
+    print(f"\n✓ Processed {len(etf_data)} symbols")
     
     # Calculate correlations
     valid_tickers = [e['ticker'] for e in etf_data]
@@ -1117,8 +1335,8 @@ def main():
     generation_date = datetime.now().strftime("%Y-%m-%d %H:%M")
     html = generate_html(etf_data, correlations, generation_date)
     
-    # Save
-    output_file = "cio_momentum_dashboard_live.html"
+    # Save to same directory as script
+    output_file = os.path.join(script_dir, "index.html")
     with open(output_file, 'w') as f:
         f.write(html)
     

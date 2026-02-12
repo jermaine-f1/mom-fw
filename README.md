@@ -18,6 +18,7 @@ This tool implements a **Quality Momentum** strategy that goes beyond simple pri
 - 🔗 **Correlation Filtering** — Builds diversified portfolios with low pairwise correlation
 - ⚙️ **Configurable Rules** — Adjust weights, thresholds, and filters in the dashboard
 - 📱 **Responsive UI** — Dark-themed dashboard that works on desktop and mobile
+- 📄 **CSV Input** — Customize your ETF universe via simple CSV file
 
 ## Installation
 
@@ -27,15 +28,40 @@ pip install -r requirements.txt
 
 ## Usage
 
+1. Edit `etf_universe.csv` to customize your ETF watchlist (optional)
+2. Run the generator:
+
 ```bash
 python generate_cio_dashboard.py
 ```
 
-This generates `cio_momentum_dashboard_live.html` — open it in any browser.
+3. Open `cio_momentum_dashboard_live.html` in any browser
 
-## ETF Universe
+## ETF Universe CSV
 
-The dashboard covers 60+ ETFs across:
+The script reads from `etf_universe.csv` in the same folder. Required columns:
+
+| Column | Description | Example |
+|--------|-------------|---------|
+| `ticker` | ETF symbol | SPY |
+| `sector` | Sector/category classification | US Equity |
+| `country` | Geographic region | US |
+
+If the CSV doesn't exist, a sample file with 60+ ETFs is auto-generated.
+
+### Example CSV
+
+```csv
+ticker,sector,country
+SPY,US Equity,US
+QQQ,US Tech,US
+EEM,EM Broad,Multi
+GLD,Gold,Global
+```
+
+## Default ETF Universe
+
+The sample CSV covers 60+ ETFs across:
 
 | Category | Examples |
 |----------|----------|
@@ -89,13 +115,17 @@ The dashboard covers 60+ ETFs across:
 
 ## Configuration
 
+### ETF Universe
+Edit `etf_universe.csv` to add/remove tickers. Each row needs:
+- `ticker` — Valid Yahoo Finance symbol
+- `sector` — Your classification (used for diversification)
+- `country` — Geographic region (used for diversification)
+
+### Script Settings
 Edit `generate_cio_dashboard.py` to customize:
 
 ```python
-ETF_UNIVERSE = [...]      # Add/remove tickers
-SECTOR_MAP = {...}        # Sector classifications
-COUNTRY_MAP = {...}       # Geographic mapping
-RISK_FREE_RATE = 0.045    # For Sortino calculation
+RISK_FREE_RATE = 0.045    # For Sortino calculation (currently ~4.5%)
 ```
 
 ## Output
