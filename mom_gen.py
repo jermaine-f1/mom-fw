@@ -1339,8 +1339,19 @@ def main():
     output_file = os.path.join(script_dir, "index.html")
     with open(output_file, 'w') as f:
         f.write(html)
-    
+
     print(f"\n✅ Dashboard saved to: {output_file}")
+
+    # Sync to sibling mom-fw-ui repo if it exists
+    ui_repo_dir = os.path.join(os.path.dirname(script_dir), "mom-fw-ui")
+    ui_index = os.path.join(ui_repo_dir, "index.html")
+    if os.path.isdir(ui_repo_dir):
+        with open(ui_index, 'w') as f:
+            f.write(html)
+        print(f"✅ Synced to: {ui_index}")
+    else:
+        print(f"⚠️  mom-fw-ui not found at {ui_repo_dir} — skipping UI sync")
+
     print("   Open in browser to view")
     print("=" * 60)
 
