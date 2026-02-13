@@ -2,13 +2,13 @@
 Invesco DB Commodity Index Tracking Fund,DBC,Commodities,ETF,Commodity Producers,TRUE
 iShares MSCI India ETF,INDA,Emerging Markets,ETF,ETF,TRUE
 iShares 1-3 Year Treasury Bond,SHY.O,Cash,Cash,Cash,FALSE
-iShares MSCI Japan,EWJ,Japan,ETF,ETF,FALSE
+iShares MSCI Japan,EWJ,Developed Markets,ETF,ETF,FALSE
 Global X Copper Miners,COPX.K,Commodities,ETF,Commodity Producers,TRUE
 iShares MSCI Taiwan Capped,EWT,Emerging Markets,ETF,Tech,FALSE
 iShares MSCI South Korea Capped,EWY,Emerging Markets,ETF,Tech,FALSE
 SPDR Gold Shares,GLD,Gold,ETF,ETF,FALSE
 iShares MSCI Global Metals & Mining Producers,PICK.K,Commodities,ETF,Commodity Producers,FALSE
-Hang Seng H-Share,2828.HK,China,ETF,ETF,FALSE
+Hang Seng H-Share,2828.HK,Emerging Markets,ETF,ETF,FALSE
 VanEck Vectors Vietnam,VNM,Emerging Markets,ETF,ETF,FALSE
 iShares US Aerospace & Defense,ITA,US,ETF,US Defense,FALSE
 SPDR S&P 500,SPY,US,ETF,US Broad Market,FALSE
@@ -25,16 +25,15 @@ Utilities Select Sector SPDR,XLU,US,ETF,US Utilities,FALSE
 iShares MSCI Italy Capped,EWI,Developed Markets,ETF,ETF,FALSE
 iShares MSCI Spain Capped,EWP,Developed Markets,ETF,ETF,FALSE
 Vanguard S&P 500 Growth,VOOG.K,US,ETF,US Tech,FALSE
-Global X Hang Seng High Dividend Yield,3110.HK,China,ETF,ETF,FALSE
+Global X Hang Seng High Dividend Yield,3110.HK,Emerging Markets,ETF,ETF,FALSE
 SPDR S&P 500,SPY,US,ETF,US Broad Market,FALSE
 iShares MSCI Global Metals & Mining Producers,PICK.K,Commodities,ETF,Commodity Producers,FALSE
 Global X FTSE Greece 20,GREK.K,Emerging Markets,ETF,ETF,FALSE
-iShares Bitcoin,IBIT.O,Crypto,ETF,Crypto,TRUE
 Industrial Select Sector SPDR,XLI,US,ETF,US Industrials,FALSE
 Invesco S&P 500 High Quality,SPHQ.K,US,ETF,US Tech,FALSE
 Invesco S&P 500 Momentum,SPMO.K,US,ETF,US Broad Market,FALSE
-KraneShares CSI China Internet,KWEB.K,China,ETF,China Tech,FALSE
-iShares MSCI China,MCHI.O,China,ETF,China Tech,FALSE
+KraneShares CSI China Internet,KWEB.K,Emerging Markets,ETF,China Tech,FALSE
+iShares MSCI China,MCHI.O,Emerging Markets,ETF,China Tech,FALSE
 SPDR Gold Shares,GLD,Gold,ETF,ETF,FALSE
 Invesco QQQ Trust,QQQ.O,US,ETF,US Tech,FALSE
 iShares US Aerospace & Defense,ITA,US,ETF,US Defense,FALSE
@@ -44,9 +43,9 @@ iShares 1-3 Year Treasury Bond,SHY.O,Cash,Cash,Cash,FALSE
 Banco Bpm,BAMI.MI,Developed Markets,Equities,Equities,FALSE
 Global X Lithium,LIT,Commodities,ETF,Commodity Producers,FALSE
 Apple,AAPL.O,US,Equities,US Tech,FALSE
-Alibaba ADR,BABA.K,China,Equities,China Tech,TRUE
+Alibaba ADR,BABA.K,Emerging Markets,Equities,China Tech,TRUE
 Micron,MU.O,US,Equities,US Tech – Semiconductors,TRUE
-Tencent Holdings,0700.HK,China,Equities,China Tech,TRUE
+Tencent Holdings,0700.HK,Emerging Markets,Equities,China Tech,TRUE
 Raiffeisen Bank,RBIV,Developed Markets,Equities,Financials,FALSE
 iShares 1-3 Year Treasury Bond,SHY.O,Cash,Cash,Cash,FALSE
 Engine Agricultural Machinery,VEA.HNO,Emerging Markets,Equities,Equities,TRUE
