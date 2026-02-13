@@ -5,7 +5,7 @@ Run this locally to fetch live Yahoo Finance data and generate the dashboard.
 
 Usage:
     pip install yfinance pandas numpy scipy
-    python generate_cio_dashboard.py
+    python mom_gen.py
 
 Input:  mapping.csv (in same folder as this script)
         Columns: Name, Symbol, Region, Category, Subcategory, High Vol
@@ -34,9 +34,6 @@ def clean_symbol(symbol):
     
     symbol = str(symbol).strip()
     
-    # Map of exchange suffixes to Yahoo Finance format
-    # Most US exchanges (.O, .K) just need the suffix removed
-    # Some international need different handling
     suffix_map = {
         '.O': '',      # NASDAQ
         '.K': '',      # NYSE Arca
@@ -46,8 +43,8 @@ def clean_symbol(symbol):
         '.WA': '.WA',  # Warsaw (keep)
         '.NS': '.NS',  # NSE India (keep)
         '.BO': '.BO',  # BSE India (keep)
-        '.HM': '',     # Vietnam - may not work
-        '.HNO': '',    # Vietnam - may not work
+        '.HM': '',     # Vietnam
+        '.HNO': '',    # Vietnam
     }
     
     for suffix, replacement in suffix_map.items():
@@ -65,45 +62,34 @@ def load_etf_universe(csv_path):
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"❌ File not found: {csv_path}")
     
-    # Read CSV, handle BOM if present
     df = pd.read_csv(csv_path, encoding='utf-8-sig')
     
-    # Validate required columns
     required_cols = ['Symbol', 'Region', 'Subcategory']
     missing = [c for c in required_cols if c not in df.columns]
     if missing:
         raise ValueError(f"CSV missing required columns: {missing}. Found: {list(df.columns)}")
     
-    # Clean symbols and remove duplicates
     df['CleanSymbol'] = df['Symbol'].apply(clean_symbol)
     df = df.dropna(subset=['CleanSymbol'])
     df = df.drop_duplicates(subset=['CleanSymbol'], keep='first')
     
-    # Build lists and maps
     tickers = df['CleanSymbol'].tolist()
-    
-    # Use Subcategory as sector (more specific), Region as country
     sector_map = dict(zip(df['CleanSymbol'], df['Subcategory']))
     country_map = dict(zip(df['CleanSymbol'], df['Region']))
     
-    # Also build name map for display
     name_map = {}
     if 'Name' in df.columns:
         name_map = dict(zip(df['CleanSymbol'], df['Name']))
     
-    # Build high vol map
     highvol_map = {}
     if 'High Vol' in df.columns:
         highvol_map = dict(zip(df['CleanSymbol'], df['High Vol'].astype(str).str.upper() == 'TRUE'))
     
-    # Build category map (ETF vs Equities)
     category_map = {}
     if 'Category' in df.columns:
         category_map = dict(zip(df['CleanSymbol'], df['Category']))
     
     print(f"✓ Loaded {len(tickers)} unique symbols")
-    
-    # Count ETFs vs non-ETFs
     etf_count = sum(1 for t in tickers if category_map.get(t, '').upper() == 'ETF')
     print(f"  → {etf_count} ETFs, {len(tickers) - etf_count} Equities/Other")
     
@@ -128,7 +114,7 @@ def calculate_metrics(prices, ticker, sector_map, country_map, name_map=None, ca
     """Calculate all momentum metrics for a single ETF"""
     try:
         prices = prices.dropna()
-        if len(prices) < 252:  # Need at least 1 year
+        if len(prices) < 252:
             return None
         
         current_price = prices.iloc[-1]
@@ -171,7 +157,7 @@ def calculate_metrics(prices, ticker, sector_map, country_map, name_map=None, ca
         prices_6m = prices.iloc[-126:] if len(prices) >= 126 else prices
         x = np.arange(len(prices_6m))
         slope, _, r_value, _, _ = stats.linregress(x, prices_6m.values)
-        slope_normalized = (slope / prices_6m.mean()) * 100  # % per day
+        slope_normalized = (slope / prices_6m.mean()) * 100
         
         # === 6. MOVING AVERAGES ===
         ma_30 = prices.rolling(window=30).mean().iloc[-1]
@@ -188,10 +174,7 @@ def calculate_metrics(prices, ticker, sector_map, country_map, name_map=None, ca
         drawdown = (cumulative / running_max) - 1
         max_dd = drawdown.min() * 100
         
-        # Get name from map or use ticker
         name = name_map.get(ticker, ticker) if name_map else ticker
-        
-        # Determine if ETF
         category = category_map.get(ticker, '') if category_map else ''
         is_etf = category.upper() == 'ETF' or category.upper() == 'CASH'
         
@@ -241,7 +224,6 @@ def calculate_correlations(prices, tickers):
 def generate_html(etf_data, correlations, generation_date):
     """Generate the complete HTML dashboard"""
     
-    # Convert to JSON for embedding
     etf_json = json.dumps(etf_data, indent=2)
     corr_json = json.dumps(correlations, indent=2)
     
@@ -255,6 +237,7 @@ def generate_html(etf_data, correlations, generation_date):
   <style>
     body {{ font-family: system-ui, -apple-system, sans-serif; }}
     .mono {{ font-family: 'SF Mono', 'Fira Code', monospace; }}
+    .top-idea-row {{ background: linear-gradient(90deg, rgba(99,102,241,0.08) 0%, transparent 100%); }}
   </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100 p-4 md:p-6">
@@ -263,23 +246,149 @@ def generate_html(etf_data, correlations, generation_date):
     <!-- Header -->
     <div class="mb-6">
       <h1 class="text-2xl md:text-3xl font-bold">📊 Momentum Portfolio Framework</h1>
-      <p class="text-slate-400 text-sm">CIO Dashboard | Diversified Quality Momentum</p>
+      <p class="text-slate-400 text-sm">CIO Dashboard | Diversified Quality Momentum Screener</p>
       <p class="text-emerald-400 text-xs mono mt-1">Live Data Generated: {generation_date}</p>
     </div>
 
     <!-- Tabs -->
     <div class="flex gap-2 mb-6 flex-wrap" id="tabs">
-      <button onclick="showTab('strategy')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-indigo-600 text-white" data-tab="strategy">🎯 Strategy</button>
-      <button onclick="showTab('signals')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="signals">📡 Signals</button>
+      <button onclick="showTab('signals')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-indigo-600 text-white" data-tab="signals">📡 Screener</button>
       <button onclick="showTab('portfolio')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="portfolio">💼 Portfolio</button>
-      <button onclick="showTab('rules')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="rules">📋 Rules</button>
+      <button onclick="showTab('strategy')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="strategy">🎯 Strategy</button>
+      <button onclick="showTab('rules')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="rules">⚙️ Settings</button>
+    </div>
+
+    <!-- ===================== SCREENER TAB (was Signals) ===================== -->
+    <div id="tab-signals" class="tab-content">
+      <div class="space-y-6">
+        
+        <!-- Filter Controls -->
+        <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+          <div class="flex flex-wrap items-center gap-4 mb-4">
+            <span class="text-sm text-slate-400 font-medium">View:</span>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="etf-only-toggle" class="w-5 h-5 rounded" checked onchange="applyFilters()">
+              <span class="text-sm">ETFs Only</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" id="top-ideas-toggle" class="w-5 h-5 rounded" onchange="applyFilters()">
+              <span class="text-sm">⭐ Top Ideas Only</span>
+            </label>
+            <div class="ml-auto text-sm text-slate-500">
+              Showing: <span id="filter-count" class="text-indigo-400 font-bold">0</span> / <span id="total-count">0</span>
+            </div>
+          </div>
+
+          <!-- Search & Dropdowns -->
+          <div class="flex flex-wrap items-center gap-4 mb-4">
+            <span class="text-sm text-slate-400 font-medium">Search:</span>
+            <input type="text" id="search-input" placeholder="Symbol, sector, region..." 
+                   class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:border-indigo-500"
+                   oninput="applyFilters()">
+            <span class="text-sm text-slate-400 font-medium ml-4">Region:</span>
+            <select id="region-filter" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500" onchange="applyFilters()">
+              <option value="">All Regions</option>
+            </select>
+            <span class="text-sm text-slate-400 font-medium ml-4">Sector:</span>
+            <select id="sector-filter" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500" onchange="applyFilters()">
+              <option value="">All Sectors</option>
+            </select>
+            <button onclick="clearFilters()" class="ml-auto px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">
+              ✕ Clear All
+            </button>
+          </div>
+
+          <!-- Toggleable Narrowing Filters — all OFF by default -->
+          <div class="border-t border-slate-700 pt-4">
+            <span class="text-sm text-slate-400 font-medium mb-3 block">Narrowing Filters (all off by default):</span>
+            <div class="flex flex-wrap items-center gap-5">
+              <label class="flex items-center gap-2 cursor-pointer bg-slate-800/50 rounded-lg px-3 py-2 hover:bg-slate-700/50 transition-colors">
+                <input type="checkbox" id="filter-ma30" class="w-4 h-4 rounded" onchange="applyFilters()">
+                <span class="text-sm">Above MA-30</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer bg-slate-800/50 rounded-lg px-3 py-2 hover:bg-slate-700/50 transition-colors">
+                <input type="checkbox" id="filter-ma60" class="w-4 h-4 rounded" onchange="applyFilters()">
+                <span class="text-sm">Above MA-60</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer bg-slate-800/50 rounded-lg px-3 py-2 hover:bg-slate-700/50 transition-colors">
+                <input type="checkbox" id="filter-ma200" class="w-4 h-4 rounded" onchange="applyFilters()">
+                <span class="text-sm">Above MA-200</span>
+              </label>
+              <div class="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-2">
+                <span class="text-sm text-slate-300">Z-Score ≤</span>
+                <input type="number" id="filter-zscore-cap" value="" placeholder="—" step="0.5" min="0" max="10"
+                       class="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm w-16 mono text-center focus:outline-none focus:border-indigo-500"
+                       oninput="applyFilters()">
+              </div>
+              <div class="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-2">
+                <span class="text-sm text-slate-300">Min Score ≥</span>
+                <input type="number" id="filter-min-score" value="" placeholder="—" step="5" min="0" max="100"
+                       class="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm w-16 mono text-center focus:outline-none focus:border-indigo-500"
+                       oninput="applyFilters()">
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="signal-summary">
+        </div>
+
+        <!-- Ranked Table -->
+        <div class="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
+          <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+            <h3 class="font-bold">All Instruments — Ranked by Quality Score</h3>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-slate-500">⭐ = Top 20 Ideas</span>
+              <span class="text-xs text-slate-500">Click headers to sort</span>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-slate-800 text-slate-400 text-xs uppercase">
+                  <th class="px-3 py-2 text-left">#</th>
+                  <th class="px-3 py-2 text-left cursor-pointer hover:text-white select-none" onclick="sortTable('ticker')">
+                    Symbol <span id="sort-ticker" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-left cursor-pointer hover:text-white select-none" onclick="sortTable('isETF')">
+                    Type <span id="sort-isETF" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-left cursor-pointer hover:text-white select-none" onclick="sortTable('country')">
+                    Region <span id="sort-country" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('score')">
+                    Score <span id="sort-score" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('return6m')">
+                    6M Ret <span id="sort-return6m" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('sortino')">
+                    Sortino <span id="sort-sortino" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('weeksDown')">
+                    Wks↓ <span id="sort-weeksDown" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('zScore')">
+                    Z <span id="sort-zScore" class="text-indigo-400"></span>
+                  </th>
+                  <th class="px-3 py-2 text-center cursor-pointer hover:text-white select-none" onclick="sortTable('maStatus')">
+                    MA <span id="sort-maStatus" class="text-indigo-400"></span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="signals-table">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ===================== STRATEGY TAB ===================== -->
-    <div id="tab-strategy" class="tab-content">
+    <div id="tab-strategy" class="tab-content hidden">
       <div class="space-y-6">
         
-        <!-- Core Principles -->
         <div class="bg-indigo-900/20 border border-indigo-700/50 rounded-xl p-6">
           <h2 class="text-xl font-bold text-indigo-400 mb-4">🎯 Core Strategy Principles</h2>
           
@@ -288,7 +397,7 @@ def generate_html(etf_data, correlations, generation_date):
             <div class="bg-slate-800/50 rounded-lg p-4">
               <div class="text-lg font-bold text-emerald-400 mb-2">1. Momentum + Diversification</div>
               <ul class="text-sm text-slate-300 space-y-2">
-                <li>• Buy ETFs with <strong>quality momentum</strong> (not just raw return)</li>
+                <li>• Screen for ETFs with <strong>quality momentum</strong> (not just raw return)</li>
                 <li>• Select holdings that are <strong>LOW correlation</strong> to each other</li>
                 <li>• Spread across <strong>countries, sectors, asset classes</strong></li>
                 <li>• Goal: Capture momentum while diversifying risk</li>
@@ -306,23 +415,22 @@ def generate_html(etf_data, correlations, generation_date):
             </div>
 
             <div class="bg-slate-800/50 rounded-lg p-4">
-              <div class="text-lg font-bold text-red-400 mb-2">3. Cut Losers, Ride Winners</div>
+              <div class="text-lg font-bold text-cyan-400 mb-2">3. Quality Over Raw Return</div>
               <ul class="text-sm text-slate-300 space-y-2">
-                <li>• <strong>SELL when:</strong></li>
-                <li class="ml-4">- Price breaks below MA30 or MA60</li>
-                <li class="ml-4">- Weeks down rises (trend weakening)</li>
-                <li class="ml-4">- Quality score deteriorates</li>
-                <li>• <strong>HOLD winners until:</strong> Z-score &gt; 4 (extreme)</li>
+                <li>• Same 18% return — <strong>take the smoother trend</strong></li>
+                <li>• Prioritize: High Sortino, few down weeks, steady slope</li>
+                <li>• Avoid: Choppy, extended, parabolic moves</li>
+                <li>• <strong>Sustainable &gt; Spectacular</strong></li>
               </ul>
             </div>
 
             <div class="bg-slate-800/50 rounded-lg p-4">
-              <div class="text-lg font-bold text-cyan-400 mb-2">4. Quality Over Raw Return</div>
+              <div class="text-lg font-bold text-purple-400 mb-2">4. Flexible Screening</div>
               <ul class="text-sm text-slate-300 space-y-2">
-                <li>• Same 18% return - <strong>take the smoother trend</strong></li>
-                <li>• Prioritize: High Sortino, few down weeks, steady slope</li>
-                <li>• Avoid: Choppy, extended, parabolic moves</li>
-                <li>• <strong>Sustainable &gt; Spectacular</strong></li>
+                <li>• Ranked universe — <strong>no rigid buy/sell labels</strong></li>
+                <li>• Use filters to narrow: MA position, Z-Score, min score</li>
+                <li>• Top-ranked ideas surface naturally</li>
+                <li>• <strong>Judgment + data, not autopilot</strong></li>
               </ul>
             </div>
           </div>
@@ -345,7 +453,7 @@ def generate_html(etf_data, correlations, generation_date):
             <div class="bg-slate-800 rounded-lg p-3 text-center">
               <div class="text-2xl font-bold text-indigo-400">20%</div>
               <div class="text-xs text-slate-400">Z-Score Penalty</div>
-              <div class="text-xs text-slate-500">Bubble detection</div>
+              <div class="text-xs text-slate-500">Extension detection</div>
             </div>
             <div class="bg-slate-800 rounded-lg p-3 text-center">
               <div class="text-2xl font-bold text-indigo-400">15%</div>
@@ -354,103 +462,7 @@ def generate_html(etf_data, correlations, generation_date):
             </div>
           </div>
           <div class="text-xs text-slate-500 bg-slate-800 p-2 rounded mono">
-            + Hard filter: Z &gt; 4 = SELL | Parabolic combo = 30% penalty | Weeks down &amp; slope caps
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===================== SIGNALS TAB ===================== -->
-    <div id="tab-signals" class="tab-content hidden">
-      <div class="space-y-6">
-        
-        <!-- Filter Controls -->
-        <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
-          <div class="flex flex-wrap items-center gap-4 mb-4">
-            <span class="text-sm text-slate-400 font-medium">Filters:</span>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" id="etf-only-toggle" class="w-5 h-5 rounded" checked onchange="applyFilters()">
-              <span class="text-sm">ETFs Only</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" id="buy-only-toggle" class="w-5 h-5 rounded" onchange="applyFilters()">
-              <span class="text-sm">BUY Signals Only</span>
-            </label>
-            <div class="ml-auto text-sm text-slate-500">
-              Showing: <span id="filter-count" class="text-indigo-400 font-bold">0</span> / <span id="total-count">0</span>
-            </div>
-          </div>
-          <div class="flex flex-wrap items-center gap-4">
-            <span class="text-sm text-slate-400 font-medium">Search:</span>
-            <input type="text" id="search-input" placeholder="Symbol, sector, region..." 
-                   class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:border-indigo-500"
-                   oninput="applyFilters()">
-            <span class="text-sm text-slate-400 font-medium ml-4">Region:</span>
-            <select id="region-filter" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500" onchange="applyFilters()">
-              <option value="">All Regions</option>
-            </select>
-            <span class="text-sm text-slate-400 font-medium ml-4">Sector:</span>
-            <select id="sector-filter" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500" onchange="applyFilters()">
-              <option value="">All Sectors</option>
-            </select>
-            <button onclick="clearFilters()" class="ml-auto px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">
-              ✕ Clear Filters
-            </button>
-          </div>
-        </div>
-        
-        <!-- Summary Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="signal-summary">
-          <!-- Filled by JS -->
-        </div>
-
-        <!-- Signals Table -->
-        <div class="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
-          <div class="p-4 border-b border-slate-800 flex justify-between items-center">
-            <h3 class="font-bold">All Instruments Ranked by Quality Score</h3>
-            <span class="text-xs text-slate-500">Click column headers to sort</span>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="bg-slate-800 text-slate-400 text-xs uppercase">
-                  <th class="px-3 py-2 text-left">#</th>
-                  <th class="px-3 py-2 text-left cursor-pointer hover:text-white select-none" onclick="sortTable('ticker')">
-                    Symbol <span id="sort-ticker" class="text-indigo-400"></span>
-                  </th>
-                  <th class="px-3 py-2 text-left cursor-pointer hover:text-white select-none" onclick="sortTable('isETF')">
-                    Type <span id="sort-isETF" class="text-indigo-400"></span>
-                  </th>
-                  <th class="px-3 py-2 text-left cursor-pointer hover:text-white select-none" onclick="sortTable('country')">
-                    Region <span id="sort-country" class="text-indigo-400"></span>
-                  </th>
-                  <th class="px-3 py-2 text-center cursor-pointer hover:text-white select-none" onclick="sortTable('signal')">
-                    Signal <span id="sort-signal" class="text-indigo-400"></span>
-                  </th>
-                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('score')">
-                    Score <span id="sort-score" class="text-indigo-400"></span>
-                  </th>
-                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('return6m')">
-                    6M Ret <span id="sort-return6m" class="text-indigo-400"></span>
-                  </th>
-                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('sortino')">
-                    Sortino <span id="sort-sortino" class="text-indigo-400"></span>
-                  </th>
-                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('weeksDown')">
-                    Wks↓ <span id="sort-weeksDown" class="text-indigo-400"></span>
-                  </th>
-                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('zScore')">
-                    Z <span id="sort-zScore" class="text-indigo-400"></span>
-                  </th>
-                  <th class="px-3 py-2 text-center cursor-pointer hover:text-white select-none" onclick="sortTable('maQuality')">
-                    MA <span id="sort-maQuality" class="text-indigo-400"></span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody id="signals-table">
-                <!-- Filled by JS -->
-              </tbody>
-            </table>
+            Score 0-100 | Parabolic combo (Z &gt; 2.5 + low weeks down + high slope) applies 30% penalty | All ETFs ranked, top 20 highlighted
           </div>
         </div>
       </div>
@@ -480,43 +492,43 @@ def generate_html(etf_data, correlations, generation_date):
               <div class="text-right text-sm mono text-indigo-400" id="maxCorrVal">0.70</div>
             </div>
           </div>
+          <div class="mt-3 text-xs text-slate-500">
+            Portfolio is built from the <strong>top-ranked</strong> ETFs in the screener (after any active filters), selecting greedily by score while enforcing the correlation constraint.
+          </div>
         </div>
 
         <!-- Portfolio Stats -->
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4" id="portfolio-stats">
-          <!-- Filled by JS -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" id="portfolio-stats">
         </div>
 
         <!-- Recommended Portfolio -->
         <div class="bg-emerald-900/20 border border-emerald-700/50 rounded-xl p-4">
-          <h3 class="font-bold text-emerald-400 mb-4">💼 Recommended Portfolio</h3>
+          <h3 class="font-bold text-emerald-400 mb-4">💼 Constructed Portfolio</h3>
           <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-3" id="portfolio-holdings">
-            <!-- Filled by JS -->
           </div>
         </div>
 
         <!-- Excluded -->
         <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
           <h3 class="font-bold text-slate-400 mb-2">🚫 Excluded (High Correlation)</h3>
-          <p class="text-sm text-slate-500">These BUY signals were excluded to maintain diversification:</p>
+          <p class="text-sm text-slate-500">These top-ranked ETFs were excluded to maintain diversification:</p>
           <div class="flex flex-wrap gap-2 mt-2" id="excluded-list">
-            <!-- Filled by JS -->
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ===================== RULES TAB ===================== -->
+    <!-- ===================== SETTINGS TAB (was Rules) ===================== -->
     <div id="tab-rules" class="tab-content hidden">
       <div class="space-y-6">
 
-        <!-- ========== SETTINGS SECTION ========== -->
+        <!-- Settings Section -->
         <div class="bg-amber-900/20 border border-amber-700/50 rounded-xl p-5">
           <h3 class="text-lg font-bold text-amber-400 mb-4">⚙️ Quality Momentum Settings</h3>
           
           <!-- Mode Toggle -->
           <div class="mb-6">
-            <label class="text-sm text-slate-400 mb-2 block">Momentum Mode</label>
+            <label class="text-sm text-slate-400 mb-2 block">Scoring Mode</label>
             <div class="flex gap-3">
               <button onclick="setMode('pure')" id="btn-pure" class="flex-1 p-3 rounded-lg border-2 border-slate-700 bg-slate-800 hover:border-orange-500 transition-all">
                 <div class="font-bold text-orange-400">📈 Pure Return</div>
@@ -557,7 +569,7 @@ def generate_html(etf_data, correlations, generation_date):
                   <label class="text-xs text-slate-400 block mb-1">Z-Score Penalty</label>
                   <input type="range" min="0" max="100" value="20" id="w-zscore" class="w-full" oninput="updateWeights()">
                   <div class="flex justify-between text-xs mt-1">
-                    <span class="text-slate-500">Bubble detection</span>
+                    <span class="text-slate-500">Extension detection</span>
                     <span class="mono text-indigo-400 font-bold" id="w-zscore-val">20%</span>
                   </div>
                 </div>
@@ -572,16 +584,16 @@ def generate_html(etf_data, correlations, generation_date):
               </div>
             </div>
 
-            <!-- Thresholds -->
+            <!-- Top Ideas Count -->
             <div class="mb-4">
-              <label class="text-sm text-slate-400 mb-2 block">Thresholds</label>
-              <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <label class="text-sm text-slate-400 mb-2 block">Ranking</label>
+              <div class="grid md:grid-cols-2 gap-4">
                 <div class="bg-slate-800 rounded-lg p-3">
-                  <label class="text-xs text-slate-400 block mb-1">Z-Score Hard Limit (SELL)</label>
-                  <input type="range" min="2" max="5" step="0.5" value="4" id="t-zscore" class="w-full" oninput="updateThresholds()">
+                  <label class="text-xs text-slate-400 block mb-1">⭐ Top Ideas Count</label>
+                  <input type="range" min="10" max="30" value="20" id="t-topcount" class="w-full" oninput="updateThresholds()">
                   <div class="flex justify-between text-xs mt-1">
-                    <span class="text-slate-500">Above = bubble</span>
-                    <span class="mono text-red-400 font-bold" id="t-zscore-val">4.0</span>
+                    <span class="text-slate-500">Highlighted in screener</span>
+                    <span class="mono text-indigo-400 font-bold" id="t-topcount-val">20</span>
                   </div>
                 </div>
                 <div class="bg-slate-800 rounded-lg p-3">
@@ -592,50 +604,6 @@ def generate_html(etf_data, correlations, generation_date):
                     <span class="mono text-orange-400 font-bold" id="t-zscore-steep-val">3.0</span>
                   </div>
                 </div>
-                <div class="bg-slate-800 rounded-lg p-3">
-                  <label class="text-xs text-slate-400 block mb-1">Max Weeks Down (SELL)</label>
-                  <input type="range" min="4" max="12" value="8" id="t-weeksdown" class="w-full" oninput="updateThresholds()">
-                  <div class="flex justify-between text-xs mt-1">
-                    <span class="text-slate-500">Above = weakening</span>
-                    <span class="mono text-red-400 font-bold" id="t-weeksdown-val">8</span>
-                  </div>
-                </div>
-                <div class="bg-slate-800 rounded-lg p-3">
-                  <label class="text-xs text-slate-400 block mb-1">Min Score for BUY</label>
-                  <input type="range" min="40" max="70" value="55" id="t-minscore" class="w-full" oninput="updateThresholds()">
-                  <div class="flex justify-between text-xs mt-1">
-                    <span class="text-slate-500">Quality threshold</span>
-                    <span class="mono text-emerald-400 font-bold" id="t-minscore-val">55</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- MA Filters -->
-            <div>
-              <label class="text-sm text-slate-400 mb-2 block">MA Quality Filters (Required for BUY)</label>
-              <div class="flex flex-wrap gap-4">
-                <label class="flex items-center gap-2 bg-slate-800 rounded-lg p-3 cursor-pointer hover:bg-slate-700">
-                  <input type="checkbox" id="ma-30" checked class="w-5 h-5 rounded" onchange="updateFilters()">
-                  <div>
-                    <div class="font-medium text-sm">Above MA-30</div>
-                    <div class="text-xs text-slate-400">Short-term trend</div>
-                  </div>
-                </label>
-                <label class="flex items-center gap-2 bg-slate-800 rounded-lg p-3 cursor-pointer hover:bg-slate-700">
-                  <input type="checkbox" id="ma-60" checked class="w-5 h-5 rounded" onchange="updateFilters()">
-                  <div>
-                    <div class="font-medium text-sm">Above MA-60</div>
-                    <div class="text-xs text-slate-400">Medium-term trend</div>
-                  </div>
-                </label>
-                <label class="flex items-center gap-2 bg-slate-800 rounded-lg p-3 cursor-pointer hover:bg-slate-700">
-                  <input type="checkbox" id="ma-200" class="w-5 h-5 rounded" onchange="updateFilters()">
-                  <div>
-                    <div class="font-medium text-sm">Above MA-200</div>
-                    <div class="text-xs text-slate-400">Long-term trend</div>
-                  </div>
-                </label>
               </div>
             </div>
           </div>
@@ -655,82 +623,12 @@ def generate_html(etf_data, correlations, generation_date):
         <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
           <h4 class="font-bold text-sm text-slate-400 mb-2">📐 Active Configuration</h4>
           <div class="mono text-xs bg-slate-800 p-3 rounded" id="config-summary">
-            Mode: Quality Momentum | Weights: Sortino 40%, WeeksDown 25%, Z-Score 20%, Slope 15%
+            Mode: Quality Momentum | Weights: Sortino 40%, WeeksDown 25%, Z-Score 20%, Slope 15% | Top Ideas: 20
           </div>
         </div>
 
         <div class="grid md:grid-cols-2 gap-6">
           
-          <!-- Entry Rules -->
-          <div class="bg-emerald-900/20 border border-emerald-700/50 rounded-xl p-5">
-            <h3 class="text-lg font-bold text-emerald-400 mb-4">✅ BUY Rules (Entry)</h3>
-            <div class="space-y-3 text-sm">
-              <div class="flex items-start gap-2">
-                <span class="text-emerald-400">1.</span>
-                <div>
-                  <div class="font-medium">Quality Score ≥ 55</div>
-                  <div class="text-slate-400">Composite of Sortino, weeks down, Z-score, slope</div>
-                </div>
-              </div>
-              <div class="flex items-start gap-2">
-                <span class="text-emerald-400">2.</span>
-                <div>
-                  <div class="font-medium">Above MA30 AND MA60</div>
-                  <div class="text-slate-400">Short and medium term trends intact</div>
-                </div>
-              </div>
-              <div class="flex items-start gap-2">
-                <span class="text-emerald-400">3.</span>
-                <div>
-                  <div class="font-medium">Z-Score &lt; 4</div>
-                  <div class="text-slate-400">Not in extreme/bubble territory</div>
-                </div>
-              </div>
-              <div class="flex items-start gap-2">
-                <span class="text-emerald-400">4.</span>
-                <div>
-                  <div class="font-medium">Low correlation to existing holdings</div>
-                  <div class="text-slate-400">Max pairwise correlation threshold</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Exit Rules -->
-          <div class="bg-red-900/20 border border-red-700/50 rounded-xl p-5">
-            <h3 class="text-lg font-bold text-red-400 mb-4">🚫 SELL Rules (Exit)</h3>
-            <div class="space-y-3 text-sm">
-              <div class="flex items-start gap-2">
-                <span class="text-red-400">1.</span>
-                <div>
-                  <div class="font-medium">Z-Score &gt; 4 (Extreme)</div>
-                  <div class="text-slate-400">Take profits - bubble territory</div>
-                </div>
-              </div>
-              <div class="flex items-start gap-2">
-                <span class="text-red-400">2.</span>
-                <div>
-                  <div class="font-medium">Price breaks below MA30 or MA60</div>
-                  <div class="text-slate-400">Trend is broken - cut the loss</div>
-                </div>
-              </div>
-              <div class="flex items-start gap-2">
-                <span class="text-red-400">3.</span>
-                <div>
-                  <div class="font-medium">Weeks Down ≥ 8 (of 12)</div>
-                  <div class="text-slate-400">Trend weakening significantly</div>
-                </div>
-              </div>
-              <div class="flex items-start gap-2">
-                <span class="text-red-400">4.</span>
-                <div>
-                  <div class="font-medium">Quality Score drops below 40</div>
-                  <div class="text-slate-400">Fundamental deterioration</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- Position Sizing -->
           <div class="bg-amber-900/20 border border-amber-700/50 rounded-xl p-5">
             <h3 class="text-lg font-bold text-amber-400 mb-4">⚖️ Position Sizing</h3>
@@ -777,30 +675,6 @@ def generate_html(etf_data, correlations, generation_date):
             </div>
           </div>
         </div>
-
-        <!-- Decision Tree -->
-        <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-5">
-          <h3 class="text-lg font-bold mb-4">🌳 Decision Tree</h3>
-          <div class="mono text-sm bg-slate-800 p-4 rounded overflow-x-auto">
-            <pre class="text-slate-300">FOR each ETF in universe:
-│
-├─ IF Z-Score > 4 → SELL (extreme)
-│
-├─ ELSE IF below MA30 OR below MA60 → SELL (trend broken)
-│
-├─ ELSE IF weeks_down >= 8 → SELL (weakening)
-│
-├─ ELSE IF Z > 2.5 AND weeks_down < 3 AND slope > 0.4 → REDUCE (parabolic)
-│
-├─ ELSE IF quality_score >= 55 AND above_MA30 AND above_MA60:
-│   │
-│   ├─ IF correlation with portfolio < max_corr → BUY
-│   │
-│   └─ ELSE → SKIP (too correlated)
-│
-└─ ELSE → HOLD/AVOID</pre>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -815,8 +689,8 @@ def generate_html(etf_data, correlations, generation_date):
     let settings = {{
       mode: 'quality',
       weights: {{ sortino: 40, weeksDown: 25, zScore: 20, slope: 15 }},
-      thresholds: {{ zScoreHard: 4.0, zScoreSteep: 3.0, weeksDown: 8, minScore: 55 }},
-      maFilters: {{ ma30: true, ma60: true, ma200: false }}
+      topCount: 20,
+      zScoreSteep: 3.0
     }};
 
     function getCorrelation(t1, t2) {{
@@ -824,7 +698,7 @@ def generate_html(etf_data, correlations, generation_date):
       return CORRELATIONS[`${{t1}}-${{t2}}`] || CORRELATIONS[`${{t2}}-${{t1}}`] || 0.5;
     }}
 
-    // Calculate Quality Score
+    // Calculate Quality Score — pure ranking, no signals
     function calculateScore(etf) {{
       const normalize = (val, min, max, inv = false) => {{
         const n = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
@@ -832,32 +706,19 @@ def generate_html(etf_data, correlations, generation_date):
       }};
 
       if (settings.mode === 'pure') {{
-        const pureScore = normalize(etf.return6m, -20, 40);
-        const maQuality = (etf.aboveMA30 ? 1 : 0) + (etf.aboveMA60 ? 1 : 0) + (etf.aboveMA200 ? 1 : 0);
-        
-        let maPass = true;
-        if (settings.maFilters.ma30 && !etf.aboveMA30) maPass = false;
-        if (settings.maFilters.ma60 && !etf.aboveMA60) maPass = false;
-        if (settings.maFilters.ma200 && !etf.aboveMA200) maPass = false;
-
-        let signal = 'HOLD';
-        if (etf.zScore > settings.thresholds.zScoreHard) signal = 'SELL';
-        else if (!maPass) signal = 'SELL';
-        else if (etf.weeksDown >= settings.thresholds.weeksDown) signal = 'SELL';
-        else if (pureScore >= settings.thresholds.minScore && maPass) signal = 'BUY';
-
-        return {{ ...etf, score: pureScore, maQuality, maPass, signal, isParabolic: false }};
+        const score = normalize(etf.return6m, -20, 40);
+        const maStatus = (etf.aboveMA30 ? 1 : 0) + (etf.aboveMA60 ? 1 : 0) + (etf.aboveMA200 ? 1 : 0);
+        return {{ ...etf, score, maStatus }};
       }}
 
-      const {{ weights, thresholds }} = settings;
+      const {{ weights }} = settings;
       const totalWeight = weights.sortino + weights.weeksDown + weights.zScore + weights.slope;
 
       const sortinoScore = normalize(etf.sortino, -1, 2.5);
       const weeksDownScore = Math.min(85, normalize(etf.weeksDown, 0, 12, true));
       
       let excessiveScore;
-      if (etf.zScore > thresholds.zScoreHard) excessiveScore = 0;
-      else if (etf.zScore > thresholds.zScoreSteep) excessiveScore = 100 - Math.pow(etf.zScore - thresholds.zScoreSteep, 2) * 100;
+      if (etf.zScore > settings.zScoreSteep) excessiveScore = 100 - Math.pow(etf.zScore - settings.zScoreSteep, 2) * 100;
       else if (etf.zScore > 2) excessiveScore = 100 - (etf.zScore - 2) * 20;
       else excessiveScore = 100;
       excessiveScore = Math.max(0, excessiveScore);
@@ -871,24 +732,13 @@ def generate_html(etf_data, correlations, generation_date):
         (slopeScore * weights.slope / totalWeight)
       );
 
+      // Parabolic penalty (still useful as a score modifier)
       const isParabolic = etf.zScore > 2.5 && etf.weeksDown < 3 && etf.slope > 0.4;
       if (isParabolic) total *= 0.7;
 
-      const maQuality = (etf.aboveMA30 ? 1 : 0) + (etf.aboveMA60 ? 1 : 0) + (etf.aboveMA200 ? 1 : 0);
-      
-      let maPass = true;
-      if (settings.maFilters.ma30 && !etf.aboveMA30) maPass = false;
-      if (settings.maFilters.ma60 && !etf.aboveMA60) maPass = false;
-      if (settings.maFilters.ma200 && !etf.aboveMA200) maPass = false;
+      const maStatus = (etf.aboveMA30 ? 1 : 0) + (etf.aboveMA60 ? 1 : 0) + (etf.aboveMA200 ? 1 : 0);
 
-      let signal = 'HOLD';
-      if (etf.zScore > thresholds.zScoreHard) signal = 'SELL';
-      else if (!maPass) signal = 'SELL';
-      else if (etf.weeksDown >= thresholds.weeksDown) signal = 'SELL';
-      else if (isParabolic) signal = 'REDUCE';
-      else if (total >= thresholds.minScore && maPass) signal = 'BUY';
-
-      return {{ ...etf, score: total, maQuality, maPass, signal, isParabolic }};
+      return {{ ...etf, score: total, maStatus }};
     }}
 
     let rankedETFs = etfUniverse.map(calculateScore).sort((a, b) => b.score - a.score);
@@ -917,29 +767,49 @@ def generate_html(etf_data, correlations, generation_date):
       }});
     }}
 
-    // Clear all filters
     function clearFilters() {{
       document.getElementById('etf-only-toggle').checked = true;
-      document.getElementById('buy-only-toggle').checked = false;
+      document.getElementById('top-ideas-toggle').checked = false;
       document.getElementById('search-input').value = '';
       document.getElementById('region-filter').value = '';
       document.getElementById('sector-filter').value = '';
+      document.getElementById('filter-ma30').checked = false;
+      document.getElementById('filter-ma60').checked = false;
+      document.getElementById('filter-ma200').checked = false;
+      document.getElementById('filter-zscore-cap').value = '';
+      document.getElementById('filter-min-score').value = '';
       applyFilters();
     }}
 
-    // Filter functions
     function applyFilters() {{
       const etfOnly = document.getElementById('etf-only-toggle').checked;
-      const buyOnly = document.getElementById('buy-only-toggle').checked;
+      const topOnly = document.getElementById('top-ideas-toggle').checked;
       const searchTerm = document.getElementById('search-input').value.toLowerCase();
       const regionFilter = document.getElementById('region-filter').value;
       const sectorFilter = document.getElementById('sector-filter').value;
       
+      // Narrowing filters
+      const reqMA30 = document.getElementById('filter-ma30').checked;
+      const reqMA60 = document.getElementById('filter-ma60').checked;
+      const reqMA200 = document.getElementById('filter-ma200').checked;
+      const zScoreCapStr = document.getElementById('filter-zscore-cap').value;
+      const minScoreStr = document.getElementById('filter-min-score').value;
+      const zScoreCap = zScoreCapStr !== '' ? parseFloat(zScoreCapStr) : null;
+      const minScore = minScoreStr !== '' ? parseFloat(minScoreStr) : null;
+      
+      // Determine top ideas based on full ranked list (before filtering)
+      const topIdeasSet = new Set(rankedETFs.slice(0, settings.topCount).map(e => e.ticker));
+      
       filteredETFs = rankedETFs.filter(e => {{
         if (etfOnly && !e.isETF) return false;
-        if (buyOnly && e.signal !== 'BUY') return false;
+        if (topOnly && !topIdeasSet.has(e.ticker)) return false;
         if (regionFilter && e.country !== regionFilter) return false;
         if (sectorFilter && e.sector !== sectorFilter) return false;
+        if (reqMA30 && !e.aboveMA30) return false;
+        if (reqMA60 && !e.aboveMA60) return false;
+        if (reqMA200 && !e.aboveMA200) return false;
+        if (zScoreCap !== null && e.zScore > zScoreCap) return false;
+        if (minScore !== null && e.score < minScore) return false;
         if (searchTerm) {{
           const searchFields = [e.ticker, e.name, e.sector, e.country].join(' ').toLowerCase();
           if (!searchFields.includes(searchTerm)) return false;
@@ -947,21 +817,18 @@ def generate_html(etf_data, correlations, generation_date):
         return true;
       }});
       
-      // Apply current sort
       sortFilteredETFs();
       renderSignals();
       updatePortfolio();
     }}
 
-    // Sort functions
+    // Sort
     function sortTable(column) {{
-      // Toggle direction if same column, otherwise default to desc for numbers, asc for strings
       if (currentSort.column === column) {{
         currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
       }} else {{
         currentSort.column = column;
-        // Default sort direction based on column type
-        const numericColumns = ['score', 'return6m', 'sortino', 'weeksDown', 'zScore', 'maQuality'];
+        const numericColumns = ['score', 'return6m', 'sortino', 'weeksDown', 'zScore', 'maStatus'];
         currentSort.direction = numericColumns.includes(column) ? 'desc' : 'asc';
       }}
       
@@ -971,29 +838,13 @@ def generate_html(etf_data, correlations, generation_date):
 
     function sortFilteredETFs() {{
       const {{ column, direction }} = currentSort;
-      const signalOrder = {{ 'BUY': 0, 'REDUCE': 1, 'HOLD': 2, 'SELL': 3 }};
       
       filteredETFs.sort((a, b) => {{
         let valA = a[column];
         let valB = b[column];
         
-        // Special handling for signal column
-        if (column === 'signal') {{
-          valA = signalOrder[valA] ?? 4;
-          valB = signalOrder[valB] ?? 4;
-        }}
-        
-        // Handle booleans
-        if (typeof valA === 'boolean') {{
-          valA = valA ? 1 : 0;
-          valB = valB ? 1 : 0;
-        }}
-        
-        // Handle strings
-        if (typeof valA === 'string') {{
-          valA = valA.toLowerCase();
-          valB = valB.toLowerCase();
-        }}
+        if (typeof valA === 'boolean') {{ valA = valA ? 1 : 0; valB = valB ? 1 : 0; }}
+        if (typeof valA === 'string') {{ valA = valA.toLowerCase(); valB = valB.toLowerCase(); }}
         
         let result = 0;
         if (valA < valB) result = -1;
@@ -1002,12 +853,9 @@ def generate_html(etf_data, correlations, generation_date):
         return direction === 'asc' ? result : -result;
       }});
       
-      // Update sort indicators
       document.querySelectorAll('[id^="sort-"]').forEach(el => el.textContent = '');
       const indicator = document.getElementById(`sort-${{column}}`);
-      if (indicator) {{
-        indicator.textContent = direction === 'asc' ? '↑' : '↓';
-      }}
+      if (indicator) indicator.textContent = direction === 'asc' ? '↑' : '↓';
     }}
 
     // Tab switching
@@ -1021,78 +869,77 @@ def generate_html(etf_data, correlations, generation_date):
       }});
       
       const activeBtn = document.querySelector(`[data-tab="${{tabId}}"]`);
-      const colors = {{ strategy: 'indigo', signals: 'emerald', portfolio: 'amber', rules: 'slate' }};
       activeBtn.classList.remove('bg-slate-800', 'text-slate-300');
-      activeBtn.classList.add(`bg-${{colors[tabId]}}-600`, 'text-white');
+      activeBtn.classList.add('bg-indigo-600', 'text-white');
     }}
 
-    // Render signals
+    // Render screener
     function renderSignals() {{
-      const buyCount = filteredETFs.filter(e => e.signal === 'BUY').length;
-      const sellCount = filteredETFs.filter(e => e.signal === 'SELL').length;
-      const holdCount = filteredETFs.filter(e => e.signal === 'HOLD' || e.signal === 'REDUCE').length;
+      const topIdeasSet = new Set(rankedETFs.slice(0, settings.topCount).map(e => e.ticker));
+      const topInView = filteredETFs.filter(e => topIdeasSet.has(e.ticker)).length;
+      const avgScore = filteredETFs.length > 0 ? (filteredETFs.reduce((s, e) => s + e.score, 0) / filteredETFs.length).toFixed(1) : '—';
+      const aboveAllMA = filteredETFs.filter(e => e.maStatus === 3).length;
 
-      // Update filter counts
       document.getElementById('filter-count').textContent = filteredETFs.length;
       document.getElementById('total-count').textContent = rankedETFs.length;
 
       document.getElementById('signal-summary').innerHTML = `
-        <div class="bg-emerald-900/30 border border-emerald-700/50 rounded-lg p-4 text-center">
-          <div class="text-3xl font-bold text-emerald-400">${{buyCount}}</div>
-          <div class="text-sm text-slate-400">BUY Signals</div>
-        </div>
-        <div class="bg-red-900/30 border border-red-700/50 rounded-lg p-4 text-center">
-          <div class="text-3xl font-bold text-red-400">${{sellCount}}</div>
-          <div class="text-sm text-slate-400">SELL Signals</div>
-        </div>
-        <div class="bg-slate-800 rounded-lg p-4 text-center">
-          <div class="text-3xl font-bold text-slate-400">${{holdCount}}</div>
-          <div class="text-sm text-slate-400">HOLD/REDUCE</div>
-        </div>
-        <div class="bg-slate-800 rounded-lg p-4 text-center">
+        <div class="bg-indigo-900/30 border border-indigo-700/50 rounded-lg p-4 text-center">
           <div class="text-3xl font-bold text-indigo-400">${{filteredETFs.length}}</div>
           <div class="text-sm text-slate-400">Showing</div>
+        </div>
+        <div class="bg-amber-900/30 border border-amber-700/50 rounded-lg p-4 text-center">
+          <div class="text-3xl font-bold text-amber-400">⭐ ${{topInView}}</div>
+          <div class="text-sm text-slate-400">Top Ideas</div>
+        </div>
+        <div class="bg-slate-800 rounded-lg p-4 text-center">
+          <div class="text-3xl font-bold text-emerald-400">${{avgScore}}</div>
+          <div class="text-sm text-slate-400">Avg Score</div>
+        </div>
+        <div class="bg-slate-800 rounded-lg p-4 text-center">
+          <div class="text-3xl font-bold text-cyan-400">${{aboveAllMA}}</div>
+          <div class="text-sm text-slate-400">All MAs ✓</div>
         </div>
       `;
 
       const tbody = document.getElementById('signals-table');
       tbody.innerHTML = filteredETFs.map((etf, i) => {{
-        const signalColors = {{
-          BUY: 'bg-emerald-900/50 text-emerald-400 border-emerald-500/50',
-          SELL: 'bg-red-900/50 text-red-400 border-red-500/50',
-          HOLD: 'bg-slate-700 text-slate-400 border-slate-600',
-          REDUCE: 'bg-orange-900/50 text-orange-400 border-orange-500/50'
-        }};
-        const rowBg = etf.signal === 'BUY' ? 'bg-emerald-900/10' : etf.signal === 'SELL' ? 'bg-red-900/10' : '';
+        const isTop = topIdeasSet.has(etf.ticker);
+        const rowClass = isTop ? 'top-idea-row' : '';
         const typeLabel = etf.isETF ? 'ETF' : 'Stock';
         const typeColor = etf.isETF ? 'text-cyan-400' : 'text-amber-400';
+        const rankBadge = isTop ? '⭐' : '';
+        
+        // Score color based on value
+        let scoreColor = 'text-slate-400';
+        if (etf.score >= 65) scoreColor = 'text-emerald-400';
+        else if (etf.score >= 50) scoreColor = 'text-indigo-400';
+        else if (etf.score >= 35) scoreColor = 'text-amber-400';
+        else scoreColor = 'text-red-400';
         
         return `
-          <tr class="border-t border-slate-800 ${{rowBg}}">
-            <td class="px-3 py-2 text-slate-500">${{i + 1}}</td>
+          <tr class="border-t border-slate-800 ${{rowClass}}">
+            <td class="px-3 py-2 text-slate-500">${{rankBadge}} ${{i + 1}}</td>
             <td class="px-3 py-2">
               <div class="font-bold">${{etf.ticker}}</div>
               <div class="text-xs text-slate-500">${{etf.sector}}</div>
             </td>
             <td class="px-3 py-2 text-xs ${{typeColor}}">${{typeLabel}}</td>
             <td class="px-3 py-2 text-xs text-slate-400">${{etf.country}}</td>
-            <td class="px-3 py-2 text-center">
-              <span class="px-2 py-1 rounded text-xs font-bold border ${{signalColors[etf.signal]}}">${{etf.signal}}</span>
-            </td>
-            <td class="px-3 py-2 text-right mono font-bold text-indigo-400">${{etf.score.toFixed(1)}}</td>
+            <td class="px-3 py-2 text-right mono font-bold ${{scoreColor}}">${{etf.score.toFixed(1)}}</td>
             <td class="px-3 py-2 text-right mono ${{etf.return6m >= 0 ? 'text-emerald-400' : 'text-red-400'}}">
               ${{etf.return6m >= 0 ? '+' : ''}}${{etf.return6m.toFixed(1)}}%
             </td>
             <td class="px-3 py-2 text-right mono">${{etf.sortino.toFixed(2)}}</td>
             <td class="px-3 py-2 text-right mono ${{etf.weeksDown >= 8 ? 'text-red-400' : ''}}">${{etf.weeksDown}}/12</td>
             <td class="px-3 py-2 text-right mono ${{etf.zScore > 4 ? 'text-red-400 font-bold' : etf.zScore > 3 ? 'text-orange-400' : ''}}">${{etf.zScore.toFixed(1)}}</td>
-            <td class="px-3 py-2 text-center ${{etf.maQuality === 3 ? 'text-emerald-400' : etf.maQuality >= 2 ? 'text-yellow-400' : 'text-red-400'}}">${{etf.maQuality}}/3</td>
+            <td class="px-3 py-2 text-center ${{etf.maStatus === 3 ? 'text-emerald-400' : etf.maStatus >= 2 ? 'text-yellow-400' : 'text-red-400'}}">${{etf.maStatus}}/3</td>
           </tr>
         `;
       }}).join('');
     }}
 
-    // Update portfolio
+    // Portfolio construction — uses top ranked from filtered list
     function updatePortfolio() {{
       const maxPos = parseInt(document.getElementById('maxPositions').value);
       const maxWt = parseInt(document.getElementById('maxWeight').value);
@@ -1102,10 +949,12 @@ def generate_html(etf_data, correlations, generation_date):
       document.getElementById('maxWeightVal').textContent = maxWt + '%';
       document.getElementById('maxCorrVal').textContent = maxCorr.toFixed(2);
 
-      const buySignals = filteredETFs.filter(e => e.signal === 'BUY');
+      // Build portfolio from the filtered + sorted list (ETFs only for portfolio)
+      const candidates = filteredETFs.filter(e => e.isETF).sort((a, b) => b.score - a.score);
       const portfolio = [];
+      const excluded = [];
 
-      for (const etf of buySignals) {{
+      for (const etf of candidates) {{
         if (portfolio.length >= maxPos) break;
         let tooCorrelated = false;
         for (const h of portfolio) {{
@@ -1114,11 +963,15 @@ def generate_html(etf_data, correlations, generation_date):
             break;
           }}
         }}
-        if (!tooCorrelated) portfolio.push(etf);
+        if (tooCorrelated) {{
+          excluded.push(etf);
+        }} else {{
+          portfolio.push(etf);
+        }}
       }}
 
       if (portfolio.length === 0) {{
-        document.getElementById('portfolio-stats').innerHTML = '<div class="col-span-full text-center text-slate-500">No positions match criteria</div>';
+        document.getElementById('portfolio-stats').innerHTML = '<div class="col-span-full text-center text-slate-500">No positions match criteria. Try adjusting filters.</div>';
         document.getElementById('portfolio-holdings').innerHTML = '';
         document.getElementById('excluded-list').innerHTML = '';
         return;
@@ -1181,10 +1034,11 @@ def generate_html(etf_data, correlations, generation_date):
         </div>
       `).join('');
 
-      const excluded = buySignals.filter(e => !portfolio.find(p => p.ticker === e.ticker));
-      document.getElementById('excluded-list').innerHTML = excluded.map(e => 
-        `<span class="px-2 py-1 bg-slate-800 rounded text-sm">${{e.ticker}} <span class="text-slate-500">(${{e.country}})</span></span>`
-      ).join('');
+      document.getElementById('excluded-list').innerHTML = excluded.length > 0 
+        ? excluded.map(e => 
+            `<span class="px-2 py-1 bg-slate-800 rounded text-sm">${{e.ticker}} <span class="text-slate-500">(Score: ${{e.score.toFixed(1)}})</span></span>`
+          ).join('')
+        : '<span class="text-sm text-slate-600">None excluded</span>';
     }}
 
     // Settings functions
@@ -1222,72 +1076,54 @@ def generate_html(etf_data, correlations, generation_date):
     }}
 
     function updateThresholds() {{
-      settings.thresholds.zScoreHard = parseFloat(document.getElementById('t-zscore').value);
-      settings.thresholds.zScoreSteep = parseFloat(document.getElementById('t-zscore-steep').value);
-      settings.thresholds.weeksDown = parseInt(document.getElementById('t-weeksdown').value);
-      settings.thresholds.minScore = parseInt(document.getElementById('t-minscore').value);
+      settings.topCount = parseInt(document.getElementById('t-topcount').value);
+      settings.zScoreSteep = parseFloat(document.getElementById('t-zscore-steep').value);
 
-      document.getElementById('t-zscore-val').textContent = settings.thresholds.zScoreHard.toFixed(1);
-      document.getElementById('t-zscore-steep-val').textContent = settings.thresholds.zScoreSteep.toFixed(1);
-      document.getElementById('t-weeksdown-val').textContent = settings.thresholds.weeksDown;
-      document.getElementById('t-minscore-val').textContent = settings.thresholds.minScore;
+      document.getElementById('t-topcount-val').textContent = settings.topCount;
+      document.getElementById('t-zscore-steep-val').textContent = settings.zScoreSteep.toFixed(1);
       
-      updateConfigSummary();
-    }}
-
-    function updateFilters() {{
-      settings.maFilters.ma30 = document.getElementById('ma-30').checked;
-      settings.maFilters.ma60 = document.getElementById('ma-60').checked;
-      settings.maFilters.ma200 = document.getElementById('ma-200').checked;
       updateConfigSummary();
     }}
 
     function updateConfigSummary() {{
-      const {{ mode, weights, thresholds, maFilters }} = settings;
+      const {{ mode, weights, topCount, zScoreSteep }} = settings;
       const modeText = mode === 'pure' ? 'Pure Return' : 'Quality Momentum';
       const weightsText = mode === 'pure' ? 'N/A' : 
         `Sortino ${{weights.sortino}}%, WeeksDown ${{weights.weeksDown}}%, Z-Score ${{weights.zScore}}%, Slope ${{weights.slope}}%`;
-      const maText = `${{maFilters.ma30 ? '30✓' : '30✗'}} ${{maFilters.ma60 ? '60✓' : '60✗'}} ${{maFilters.ma200 ? '200✓' : '200✗'}}`;
       
       document.getElementById('config-summary').textContent = 
-        `Mode: ${{modeText}} | Weights: ${{weightsText}} | Z-Limit: ${{thresholds.zScoreHard}} | MA: ${{maText}}`;
+        `Mode: ${{modeText}} | Weights: ${{weightsText}} | Top Ideas: ${{topCount}} | Z-Steep: ${{zScoreSteep}}`;
     }}
 
     function applySettings() {{
       rankedETFs = etfUniverse.map(calculateScore).sort((a, b) => b.score - a.score);
-      applyFilters();  // This will update filteredETFs and call renderSignals + updatePortfolio
+      applyFilters();
     }}
 
     function resetSettings() {{
       settings = {{
         mode: 'quality',
         weights: {{ sortino: 40, weeksDown: 25, zScore: 20, slope: 15 }},
-        thresholds: {{ zScoreHard: 4.0, zScoreSteep: 3.0, weeksDown: 8, minScore: 55 }},
-        maFilters: {{ ma30: true, ma60: true, ma200: false }}
+        topCount: 20,
+        zScoreSteep: 3.0
       }};
 
       document.getElementById('w-sortino').value = 40;
       document.getElementById('w-weeksdown').value = 25;
       document.getElementById('w-zscore').value = 20;
       document.getElementById('w-slope').value = 15;
-      document.getElementById('t-zscore').value = 4;
+      document.getElementById('t-topcount').value = 20;
       document.getElementById('t-zscore-steep').value = 3;
-      document.getElementById('t-weeksdown').value = 8;
-      document.getElementById('t-minscore').value = 55;
-      document.getElementById('ma-30').checked = true;
-      document.getElementById('ma-60').checked = true;
-      document.getElementById('ma-200').checked = false;
 
       updateWeights();
       updateThresholds();
-      updateFilters();
       setMode('quality');
       applySettings();
     }}
 
     // Initialize
     initFilterDropdowns();
-    applyFilters();  // This sets filteredETFs and renders
+    applyFilters();
     updateConfigSummary();
   </script>
 </body>
@@ -1301,19 +1137,15 @@ def main():
     print("📊 CIO Momentum Dashboard Generator")
     print("=" * 60)
     
-    # Get the directory where the script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
     csv_path = os.path.join(script_dir, "mapping.csv")
     
-    # Load universe from CSV
     tickers, sector_map, country_map, name_map, highvol_map, category_map = load_etf_universe(csv_path)
     
-    # Fetch data
     prices = fetch_data(tickers)
     if prices is None:
         return
     
-    # Calculate metrics for each ticker
     print("\n📈 Calculating metrics...")
     etf_data = []
     for ticker in tickers:
@@ -1326,23 +1158,19 @@ def main():
     
     print(f"\n✓ Processed {len(etf_data)} symbols")
     
-    # Calculate correlations
     valid_tickers = [e['ticker'] for e in etf_data]
     correlations = calculate_correlations(prices, valid_tickers)
     print(f"✓ Calculated {len(correlations)} pairwise correlations")
     
-    # Generate HTML
     generation_date = datetime.now().strftime("%Y-%m-%d %H:%M")
     html = generate_html(etf_data, correlations, generation_date)
     
-    # Save to same directory as script
     output_file = os.path.join(script_dir, "index.html")
     with open(output_file, 'w') as f:
         f.write(html)
 
     print(f"\n✅ Dashboard saved to: {output_file}")
 
-    # Sync to sibling mom-fw-ui repo if it exists
     ui_repo_dir = os.path.join(os.path.dirname(script_dir), "mom-fw-ui")
     ui_index = os.path.join(ui_repo_dir, "index.html")
     if os.path.isdir(ui_repo_dir):
