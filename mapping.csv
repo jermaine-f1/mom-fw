@@ -6,7 +6,7 @@ iShares MSCI Japan,EWJ,Developed Markets,ETF,ETF,FALSE
 Global X Copper Miners,COPX.K,Commodities,ETF,Commodity Producers,TRUE
 iShares MSCI Taiwan Capped,EWT,Emerging Markets,ETF,Tech,FALSE
 iShares MSCI South Korea Capped,EWY,Emerging Markets,ETF,Tech,FALSE
-SPDR Gold Shares,GLD,Gold,ETF,ETF,FALSE
+SPDR Gold Shares,GLD,Commodities,ETF,Precious Metals,FALSE
 iShares MSCI Global Metals & Mining Producers,PICK.K,Commodities,ETF,Commodity Producers,FALSE
 Hang Seng H-Share,2828.HK,Emerging Markets,ETF,ETF,FALSE
 VanEck Vectors Vietnam,VNM,Emerging Markets,ETF,ETF,FALSE
@@ -34,7 +34,7 @@ Invesco S&P 500 High Quality,SPHQ.K,US,ETF,US Tech,FALSE
 Invesco S&P 500 Momentum,SPMO.K,US,ETF,US Broad Market,FALSE
 KraneShares CSI China Internet,KWEB.K,Emerging Markets,ETF,China Tech,FALSE
 iShares MSCI China,MCHI.O,Emerging Markets,ETF,China Tech,FALSE
-SPDR Gold Shares,GLD,Gold,ETF,ETF,FALSE
+SPDR Gold Shares,GLD,Commodities,ETF,Precious Metals,FALSE
 Invesco QQQ Trust,QQQ.O,US,ETF,US Tech,FALSE
 iShares US Aerospace & Defense,ITA,US,ETF,US Defense,FALSE
 VanEck Vectors Semiconductor,SMH.O,US,ETF,US Tech – Semiconductors,TRUE
