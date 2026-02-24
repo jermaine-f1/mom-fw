@@ -16,7 +16,8 @@ Output: index.html
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from scipy import stats
 import json
 import os
@@ -1162,7 +1163,7 @@ def main():
     correlations = calculate_correlations(prices, valid_tickers)
     print(f"✓ Calculated {len(correlations)} pairwise correlations")
     
-    generation_date = datetime.now().strftime("%Y-%m-%d %H:%M")
+    generation_date = datetime.now(ZoneInfo("America/New_York")).strftime("%Y-%m-%d %H:%M ET")
     html = generate_html(etf_data, correlations, generation_date)
     
     output_file = os.path.join(script_dir, "index.html")
