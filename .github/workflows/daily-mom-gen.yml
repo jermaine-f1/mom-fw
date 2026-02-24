@@ -40,3 +40,26 @@ jobs:
             git commit -m "Daily momentum dashboard update $(date -u +%Y-%m-%d)"
             git push
           fi
+
+      - name: Checkout mom-fw-ui
+        uses: actions/checkout@v4
+        with:
+          repository: jermaine-f1/mom-fw-ui
+          token: ${{ secrets.MOMFW_UI_PAT }}
+          path: mom-fw-ui
+
+      - name: Sync index.html to mom-fw-ui
+        run: cp index.html mom-fw-ui/index.html
+
+      - name: Commit and push to mom-fw-ui
+        working-directory: mom-fw-ui
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No changes to index.html in mom-fw-ui — skipping push."
+          else
+            git commit -m "Sync index.html from mom-fw@${GITHUB_SHA::7}"
+            git push
+          fi
