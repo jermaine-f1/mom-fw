@@ -1177,7 +1177,7 @@ def main():
         with open(ui_index, 'w') as f:
             f.write(html)
         print(f"✅ Synced to: {ui_index}")
-    else:
+    elif not os.environ.get("CI"):
         print(f"⚠️  mom-fw-ui not found at {ui_repo_dir} — skipping UI sync")
 
     print("   Open in browser to view")
