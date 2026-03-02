@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 import types
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -544,6 +545,42 @@ class TestFetchData:
         mocker.patch("mom_gen.yf.download", side_effect=Exception("Network error"))
         result = fetch_data(["SPY"])
         assert result is None
+
+    def test_fetch_data_calls_yfinance_with_correct_params(self, mocker):
+        """Test that fetch_data calls yf.download with correct start date and tickers."""
+        mock_download = mocker.patch("mom_gen.yf.download")
+        mock_download.return_value = {"Close": pd.DataFrame()}
+
+        tickers = ["SPY", "QQQ", "GLD"]
+        fetch_data(tickers)
+
+        mock_download.assert_called_once()
+        call_args = mock_download.call_args
+        # First positional arg should be the tickers list
+        assert call_args[0][0] == tickers
+        # Should request ~3 years of data
+        start_str = call_args[1].get("start") or call_args[0][1]
+        start_date = datetime.strptime(start_str, "%Y-%m-%d")
+        days_back = (datetime.now() - start_date).days
+        assert 1090 <= days_back <= 1100  # ~3 years (3*365 = 1095)
+
+    def test_fetch_data_uses_live_yfinance_not_static(self, mocker):
+        """Verify fetch_data uses yf.download (live API), not static/cached data."""
+        mock_download = mocker.patch("mom_gen.yf.download")
+        dates = pd.bdate_range(start="2023-01-01", periods=252)
+        mock_data = pd.DataFrame(
+            {"SPY": np.random.rand(252) * 100 + 400}, index=dates
+        )
+        mock_download.return_value = {"Close": mock_data}
+
+        result = fetch_data(["SPY"])
+
+        # Confirm it called the live yfinance API
+        mock_download.assert_called_once()
+        # Confirm progress=True (shows download progress bar)
+        assert mock_download.call_args[1].get("progress") is True
+        # Confirm no end_date is set (fetches up to current date)
+        assert "end" not in mock_download.call_args[1]
 
 
 # ======================== TESTS: generate_html ========================
