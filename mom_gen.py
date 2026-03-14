@@ -72,7 +72,7 @@ def load_etf_universe(csv_path):
     
     df['CleanSymbol'] = df['Symbol'].apply(clean_symbol)
     df = df.dropna(subset=['CleanSymbol'])
-    df = df.drop_duplicates(subset=['CleanSymbol'], keep='first')
+    df = df.drop_duplicates(subset=['CleanSymbol'], keep='last')
     
     tickers = df['CleanSymbol'].tolist()
     sector_map = dict(zip(df['CleanSymbol'], df['Subcategory']))
