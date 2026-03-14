@@ -161,3 +161,72 @@ Valero Energy,VLO,US,Equities,Energy,TRUE
 Aberdeen Standard Physical Palladium Shares,PALL.K,Commodities,ETF,Precious Metals – Palladium,TRUE
 iShares U.S. Regional Banks,IAT,US,ETF,ETF,TRUE
 iShares MSCI Malaysia,EWM,Emerging Markets,ETF,ETF,TRUE
+Industrial Select Sector SPDR,XLI,TAA ETFs,ETF,US Industrials,FALSE
+Invesco QQQ Trust,QQQ.O,TAA ETFs,ETF,US Tech,FALSE
+SPDR S&P 500,SPY,TAA ETFs,ETF,US Broad Market,FALSE
+Financial Select Sector SPDR,XLF,TAA ETFs,ETF,Financials,FALSE
+Health Care Select Sector SPDR,XLV,TAA ETFs,ETF,Healthcare,FALSE
+Consumer Discretionary Select Sector SPDR,XLY,TAA ETFs,ETF,ETF,FALSE
+Consumer Staples Select Sector SPDR,XLP,TAA ETFs,ETF,ETF,FALSE
+Utilities Select Sector SPDR,XLU,TAA ETFs,ETF,US Utilities,FALSE
+iShares US Aerospace & Defense,ITA,TAA ETFs,ETF,US Defense,FALSE
+iShares US Home Construction,ITB,TAA ETFs,ETF,ETF,FALSE
+iShares US Regional Banks,IAT,TAA ETFs,ETF,ETF,TRUE
+Invesco S&P 500 Equal Weight,RSP,TAA ETFs,ETF,US Broad Market,FALSE
+VanEck Vectors Semiconductor,SMH.O,TAA ETFs,ETF,US Tech – Semiconductors,TRUE
+iShares Russell 2000,IWM,TAA ETFs,ETF,US Broad Market,FALSE
+Roundhill Magnificent Seven,MAGS,TAA ETFs,ETF,US Tech,FALSE
+Invesco S&P 500 Momentum,SPMO.K,TAA ETFs,ETF,US Broad Market,FALSE
+Vanguard S&P 500 Growth,VOOG.K,TAA ETFs,ETF,US Tech,FALSE
+Vanguard S&P 500 Value,VOOV.K,TAA ETFs,ETF,ETF,FALSE
+Invesco S&P 500 High Quality,SPHQ.K,TAA ETFs,ETF,US Tech,FALSE
+iShares MSCI Switzerland,EWL,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Germany,EWG,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI United Kingdom,EWU,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Canada,EWC,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Australia,EWA,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI France,EWQ,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Spain Capped,EWP,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Netherlands,EWN,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Sweden,EWD,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Italy Capped,EWI,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Japan,EWJ,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Singapore Capped,EWS,TAA ETFs,ETF,ETF,FALSE
+SPDR Euro Stoxx 50,FEZ,TAA ETFs,ETF,ETF,FALSE
+iShares Core MSCI EAFE,IEFA,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Israel,EIS,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Peru,EPU,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Indonesia,EIDO,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Poland Capped,EPOL.K,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Malaysia,EWM,TAA ETFs,ETF,ETF,TRUE
+iShares MSCI Taiwan Capped,EWT,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Mexico Capped,EWW,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI South Korea Capped,EWY,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Brazil Capped,EWZ,TAA ETFs,ETF,ETF,FALSE
+iShares Latin America 40,ILF,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI South Africa,EZA,TAA ETFs,ETF,ETF,FALSE
+Global X FTSE Greece 20,GREK.K,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Turkey,TUR,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI UAE,UAE,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Saudi Arabia,KSA,TAA ETFs,ETF,ETF,FALSE
+Global X MSCI Argentina,ARGT,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Thailand,THD,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Philippines,EPHE,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Chile Capped,ECH,TAA ETFs,ETF,ETF,FALSE
+VanEck Vectors Vietnam,VNM,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Qatar,QAT,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI Emerging Markets ex China,EMXC.O,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI China A,CNYA,TAA ETFs,ETF,ETF,FALSE
+iShares MSCI China,MCHI.O,TAA ETFs,ETF,China Tech,FALSE
+KraneShares CSI China Internet,KWEB.K,TAA ETFs,ETF,China Tech,FALSE
+Global X Hang Seng High Dividend Yield,3110.HK,TAA ETFs,ETF,ETF,FALSE
+Global X Copper Miners,COPX.K,TAA ETFs,ETF,Commodity Producers,TRUE
+Invesco DB Commodity Index Tracking Fund,DBC,TAA ETFs,ETF,Commodity Producers,TRUE
+iShares MSCI Global Metals & Mining Producers,PICK.K,TAA ETFs,ETF,Commodity Producers,FALSE
+VanEck Agribusiness,MOO,TAA ETFs,ETF,Commodity Producers,FALSE
+Materials Select Sector SPDR,XLB,TAA ETFs,ETF,ETF,FALSE
+Energy Select Sector SPDR,XLE,TAA ETFs,ETF,Energy,FALSE
+iShares MSCI India ETF,INDA,TAA ETFs,ETF,ETF,TRUE
+iShares 1-3 Year Treasury Bond,SHY.O,TAA ETFs,Cash,Cash,FALSE
+iShares Bitcoin Trust,IBIT,TAA ETFs,ETF,ETF,FALSE
+SPDR Gold Shares,GLD,TAA ETFs,ETF,Precious Metals,FALSE
