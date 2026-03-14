@@ -72,8 +72,19 @@ def load_etf_universe(csv_path):
     
     df['CleanSymbol'] = df['Symbol'].apply(clean_symbol)
     df = df.dropna(subset=['CleanSymbol'])
-    df = df.drop_duplicates(subset=['CleanSymbol'], keep='last')
-    
+
+    # Collect all unique regions per ticker before deduplication
+    regions_map = {}
+    for _, row in df.iterrows():
+        sym = row['CleanSymbol']
+        region = row['Region']
+        if sym not in regions_map:
+            regions_map[sym] = []
+        if region not in regions_map[sym]:
+            regions_map[sym].append(region)
+
+    df = df.drop_duplicates(subset=['CleanSymbol'], keep='first')
+
     tickers = df['CleanSymbol'].tolist()
     sector_map = dict(zip(df['CleanSymbol'], df['Subcategory']))
     country_map = dict(zip(df['CleanSymbol'], df['Region']))
@@ -94,7 +105,7 @@ def load_etf_universe(csv_path):
     etf_count = sum(1 for t in tickers if category_map.get(t, '').upper() == 'ETF')
     print(f"  → {etf_count} ETFs, {len(tickers) - etf_count} Equities/Other")
     
-    return tickers, sector_map, country_map, name_map, highvol_map, category_map
+    return tickers, sector_map, country_map, name_map, highvol_map, category_map, regions_map
 
 
 def fetch_data(tickers):
@@ -111,7 +122,7 @@ def fetch_data(tickers):
         return None
 
 
-def calculate_metrics(prices, ticker, sector_map, country_map, name_map=None, category_map=None):
+def calculate_metrics(prices, ticker, sector_map, country_map, name_map=None, category_map=None, regions_map=None):
     """Calculate all momentum metrics for a single ETF"""
     try:
         prices = prices.dropna()
@@ -184,6 +195,7 @@ def calculate_metrics(prices, ticker, sector_map, country_map, name_map=None, ca
             'name': name,
             'sector': sector_map.get(ticker, 'Other'),
             'country': country_map.get(ticker, 'Other'),
+            'regions': (regions_map or {}).get(ticker, [country_map.get(ticker, 'Other')]),
             'category': category,
             'isETF': is_etf,
             'price': round(current_price, 2),
@@ -748,7 +760,7 @@ def generate_html(etf_data, correlations, generation_date):
 
     // Initialize filter dropdowns
     function initFilterDropdowns() {{
-      const regions = [...new Set(etfUniverse.map(e => e.country))].sort();
+      const regions = [...new Set(etfUniverse.flatMap(e => e.regions))].sort();
       const sectors = [...new Set(etfUniverse.map(e => e.sector))].sort();
       
       const regionSelect = document.getElementById('region-filter');
@@ -804,7 +816,7 @@ def generate_html(etf_data, correlations, generation_date):
       filteredETFs = rankedETFs.filter(e => {{
         if (etfOnly && !e.isETF) return false;
         if (topOnly && !topIdeasSet.has(e.ticker)) return false;
-        if (regionFilter && e.country !== regionFilter) return false;
+        if (regionFilter && !e.regions.includes(regionFilter)) return false;
         if (sectorFilter && e.sector !== sectorFilter) return false;
         if (reqMA30 && !e.aboveMA30) return false;
         if (reqMA60 && !e.aboveMA60) return false;
@@ -812,7 +824,7 @@ def generate_html(etf_data, correlations, generation_date):
         if (zScoreCap !== null && e.zScore > zScoreCap) return false;
         if (minScore !== null && e.score < minScore) return false;
         if (searchTerm) {{
-          const searchFields = [e.ticker, e.name, e.sector, e.country].join(' ').toLowerCase();
+          const searchFields = [e.ticker, e.name, e.sector, e.country, ...e.regions].join(' ').toLowerCase();
           if (!searchFields.includes(searchTerm)) return false;
         }}
         return true;
@@ -1141,7 +1153,7 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     csv_path = os.path.join(script_dir, "mapping.csv")
     
-    tickers, sector_map, country_map, name_map, highvol_map, category_map = load_etf_universe(csv_path)
+    tickers, sector_map, country_map, name_map, highvol_map, category_map, regions_map = load_etf_universe(csv_path)
     
     prices = fetch_data(tickers)
     if prices is None:
@@ -1151,7 +1163,7 @@ def main():
     etf_data = []
     for ticker in tickers:
         if ticker in prices.columns:
-            metrics = calculate_metrics(prices[ticker], ticker, sector_map, country_map, name_map, category_map)
+            metrics = calculate_metrics(prices[ticker], ticker, sector_map, country_map, name_map, category_map, regions_map)
             if metrics:
                 etf_data.append(metrics)
                 etf_label = "ETF" if metrics['isETF'] else "EQ"

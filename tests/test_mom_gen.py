@@ -185,7 +185,7 @@ class TestLoadEtfUniverse:
     """Tests for loading the ETF universe from CSV."""
 
     def test_load_valid_csv(self, sample_csv):
-        tickers, sector_map, country_map, name_map, highvol_map, category_map = load_etf_universe(sample_csv)
+        tickers, sector_map, country_map, name_map, highvol_map, category_map, regions_map = load_etf_universe(sample_csv)
         assert len(tickers) == 5
         assert "SPY" in tickers
         assert "QQQ" in tickers  # QQQ.O cleaned to QQQ
@@ -208,12 +208,12 @@ class TestLoadEtfUniverse:
         assert name_map["QQQ"] == "Invesco QQQ Trust"
 
     def test_highvol_map(self, sample_csv):
-        _, _, _, _, highvol_map, _ = load_etf_universe(sample_csv)
+        _, _, _, _, highvol_map, *_ = load_etf_universe(sample_csv)
         assert highvol_map["SPY"] is False
         assert highvol_map["INDA"] is True
 
     def test_category_map(self, sample_csv):
-        *_, category_map = load_etf_universe(sample_csv)
+        _, _, _, _, _, category_map, _ = load_etf_universe(sample_csv)
         assert category_map["SPY"] == "ETF"
 
     def test_duplicates_removed(self, sample_csv_with_duplicates):
@@ -255,7 +255,7 @@ class TestCalculateMetrics:
         )
         assert result is not None
         expected_keys = {
-            "ticker", "name", "sector", "country", "category", "isETF",
+            "ticker", "name", "sector", "country", "regions", "category", "isETF",
             "price", "return6m", "sortino", "weeksDown", "zScore",
             "slope", "aboveMA30", "aboveMA60", "aboveMA200", "maxDD",
         }
@@ -663,7 +663,7 @@ class TestIntegration:
 
     def test_load_and_calculate_pipeline(self, sample_csv, sample_prices):
         """Test the pipeline from loading CSV to calculating metrics."""
-        tickers, sector_map, country_map, name_map, highvol_map, category_map = load_etf_universe(sample_csv)
+        tickers, sector_map, country_map, name_map, highvol_map, category_map, regions_map = load_etf_universe(sample_csv)
 
         # Use SPY from the loaded universe
         assert "SPY" in tickers
