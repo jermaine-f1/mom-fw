@@ -267,6 +267,7 @@ def generate_html(etf_data, correlations, generation_date):
     <div class="flex gap-2 mb-6 flex-wrap" id="tabs">
       <button onclick="showTab('signals')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-indigo-600 text-white" data-tab="signals">📡 Screener</button>
       <button onclick="showTab('portfolio')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="portfolio">💼 Portfolio</button>
+      <button onclick="showTab('cio')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="cio">🏛️ CIO Signals</button>
       <button onclick="showTab('strategy')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="strategy">🎯 Strategy</button>
       <button onclick="showTab('rules')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="rules">⚙️ Settings</button>
     </div>
@@ -395,6 +396,31 @@ def generate_html(etf_data, correlations, generation_date):
             </table>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ===================== CIO SIGNALS TAB ===================== -->
+    <div id="tab-cio" class="tab-content hidden">
+      <div class="space-y-4">
+
+        <!-- Sub-tabs -->
+        <div class="flex gap-2 flex-wrap" id="cio-subtabs">
+          <button onclick="showCioSubTab('overview')" class="cio-subtab-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 text-white" data-cio-tab="overview">Overview</button>
+          <button onclick="showCioSubTab('commodities')" class="cio-subtab-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-cio-tab="commodities">Commodities</button>
+          <button onclick="showCioSubTab('em')" class="cio-subtab-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-cio-tab="em">Emerging Mkts</button>
+          <button onclick="showCioSubTab('dm')" class="cio-subtab-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-cio-tab="dm">Developed Mkts</button>
+          <button onclick="showCioSubTab('us')" class="cio-subtab-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-cio-tab="us">US</button>
+          <button onclick="showCioSubTab('taa')" class="cio-subtab-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-cio-tab="taa">TAA</button>
+        </div>
+
+        <!-- Sub-tab content containers -->
+        <div id="cio-subtab-overview" class="cio-subtab-content"></div>
+        <div id="cio-subtab-commodities" class="cio-subtab-content hidden"></div>
+        <div id="cio-subtab-em" class="cio-subtab-content hidden"></div>
+        <div id="cio-subtab-dm" class="cio-subtab-content hidden"></div>
+        <div id="cio-subtab-us" class="cio-subtab-content hidden"></div>
+        <div id="cio-subtab-taa" class="cio-subtab-content hidden"></div>
+
       </div>
     </div>
 
@@ -884,6 +910,13 @@ def generate_html(etf_data, correlations, generation_date):
       const activeBtn = document.querySelector(`[data-tab="${{tabId}}"]`);
       activeBtn.classList.remove('bg-slate-800', 'text-slate-300');
       activeBtn.classList.add('bg-indigo-600', 'text-white');
+
+      // Re-render CIO tab when opened (picks up score/settings changes)
+      if (tabId === 'cio') {{
+        const activeCioTab = document.querySelector('.cio-subtab-btn.bg-indigo-600');
+        const activeKey = activeCioTab ? activeCioTab.dataset.cioTab : 'overview';
+        renderCioSubTab(activeKey);
+      }}
     }}
 
     // Render screener
@@ -1134,10 +1167,340 @@ def generate_html(etf_data, correlations, generation_date):
       applySettings();
     }}
 
+    // ========== CIO SIGNALS DASHBOARD ==========
+
+    const CIO_REGIONS = {{
+      overview: {{ label: 'All Regions', filter: () => true }},
+      commodities: {{ label: 'Commodities', filter: e => e.regions.includes('Commodities') }},
+      em: {{ label: 'Emerging Markets', filter: e => e.regions.includes('Emerging Markets') || e.regions.includes('India') }},
+      dm: {{ label: 'Developed Markets', filter: e => e.regions.includes('Developed Markets') }},
+      us: {{ label: 'US', filter: e => e.regions.includes('US') }},
+      taa: {{ label: 'TAA', filter: e => e.regions.includes('TAA ETFs') }}
+    }};
+
+    function showCioSubTab(tabId) {{
+      document.querySelectorAll('.cio-subtab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('cio-subtab-' + tabId).classList.remove('hidden');
+      document.querySelectorAll('.cio-subtab-btn').forEach(btn => {{
+        btn.classList.remove('bg-indigo-600', 'text-white');
+        btn.classList.add('bg-slate-800', 'text-slate-300');
+      }});
+      const activeBtn = document.querySelector(`[data-cio-tab="${{tabId}}"]`);
+      activeBtn.classList.remove('bg-slate-800', 'text-slate-300');
+      activeBtn.classList.add('bg-indigo-600', 'text-white');
+      renderCioSubTab(tabId);
+    }}
+
+    function getCioRegionData(regionKey) {{
+      const cfg = CIO_REGIONS[regionKey];
+      const etfs = rankedETFs.filter(e => e.isETF && cfg.filter(e));
+      const maIntact = etfs.filter(e => e.maStatus === 3).length;
+      const fullStack = etfs.filter(e => e.maStatus >= 2).length;
+      const maBroken = etfs.filter(e => e.maStatus === 0).length;
+      const avgWksDown = etfs.length > 0 ? (etfs.reduce((s, e) => s + e.weeksDown, 0) / etfs.length) : 0;
+      const breadthPct = etfs.length > 0 ? (maIntact / etfs.length * 100) : 0;
+      return {{ etfs, maIntact, fullStack, maBroken, avgWksDown, breadthPct, total: etfs.length, label: cfg.label }};
+    }}
+
+    function zScoreColor(z) {{
+      if (z <= 0.5) return '#6366f1';   // indigo — deeply oversold
+      if (z <= 1.0) return '#22c55e';   // green — normal
+      if (z <= 2.0) return '#eab308';   // yellow — warm
+      if (z <= 3.0) return '#f97316';   // orange — extended
+      return '#ef4444';                  // red — extreme
+    }}
+
+    function zScoreZoneLabel(z) {{
+      if (z <= 0.5) return 'Oversold';
+      if (z <= 1.0) return 'Normal';
+      if (z <= 2.0) return 'Warm';
+      if (z <= 3.0) return 'Extended';
+      return 'Extreme';
+    }}
+
+    function renderColorStrip(etfs) {{
+      if (etfs.length === 0) return '<div class="text-sm text-slate-500">No ETFs</div>';
+      const sorted = [...etfs].sort((a, b) => a.zScore - b.zScore);
+      const segments = sorted.map(e => {{
+        const color = zScoreColor(e.zScore);
+        const widthPct = (100 / sorted.length).toFixed(2);
+        return `<div title="${{e.ticker}}: z=${{e.zScore.toFixed(1)}}" style="width:${{widthPct}}%;background:${{color}};height:18px;display:inline-block;cursor:pointer;" class="hover:opacity-80 transition-opacity"></div>`;
+      }}).join('');
+      return `<div style="display:flex;border-radius:6px;overflow:hidden;">${{segments}}</div>
+        <div class="flex justify-between text-xs text-slate-500 mt-1">
+          <span>← Oversold</span><span>Normal</span><span>Extended →</span>
+        </div>`;
+    }}
+
+    function renderEtfCardsByTier(etfs) {{
+      const tiers = [
+        {{ label: 'MA 3/3 — Full alignment', status: 3, color: 'emerald' }},
+        {{ label: 'MA 2/3 — Partial alignment', status: 2, color: 'yellow' }},
+        {{ label: 'MA 1/3 — Weak', status: 1, color: 'orange' }},
+        {{ label: 'MA 0/3 — No support', status: 0, color: 'red' }}
+      ];
+      return tiers.map(tier => {{
+        const tierETFs = etfs.filter(e => e.maStatus === tier.status).sort((a, b) => a.weeksDown - b.weeksDown);
+        if (tierETFs.length === 0) return '';
+        const cards = tierETFs.map(e => {{
+          const retColor = e.return6m >= 0 ? 'text-emerald-400' : 'text-red-400';
+          const zColor = e.zScore > 3 ? 'text-red-400' : e.zScore > 2 ? 'text-orange-400' : 'text-slate-300';
+          return `<div class="bg-slate-800 rounded-lg p-2.5 min-w-[130px]">
+            <div class="font-bold text-sm">${{e.ticker}}</div>
+            <div class="text-xs text-slate-500 truncate">${{e.name || e.sector}}</div>
+            <div class="grid grid-cols-2 gap-x-2 mt-1.5 text-xs">
+              <span class="text-slate-500">Ret</span><span class="${{retColor}} text-right">${{e.return6m >= 0 ? '+' : ''}}${{e.return6m.toFixed(1)}}%</span>
+              <span class="text-slate-500">Z</span><span class="${{zColor}} text-right">${{e.zScore.toFixed(1)}}</span>
+              <span class="text-slate-500">Wks↓</span><span class="text-right ${{e.weeksDown >= 6 ? 'text-red-400' : ''}}">${{e.weeksDown}}/12</span>
+              <span class="text-slate-500">Score</span><span class="text-indigo-400 text-right">${{e.score.toFixed(0)}}</span>
+            </div>
+          </div>`;
+        }}).join('');
+        return `<div class="mb-4">
+          <div class="text-sm font-bold text-${{tier.color}}-400 mb-2">${{tier.label}} <span class="text-slate-500 font-normal">(${{tierETFs.length}})</span></div>
+          <div class="flex flex-wrap gap-2">${{cards}}</div>
+        </div>`;
+      }}).join('');
+    }}
+
+    function generateSignalReading(data) {{
+      const {{ maIntact, maBroken, total, avgWksDown, breadthPct, label }} = data;
+      const lines = [];
+
+      if (breadthPct >= 70) {{
+        lines.push(`<span class="text-emerald-400 font-bold">Strong uptrend.</span> ${{maIntact}} of ${{total}} ${{label}} ETFs hold all three MAs — broad participation confirms the rally.`);
+      }} else if (breadthPct >= 40) {{
+        lines.push(`<span class="text-yellow-400 font-bold">Mixed signals.</span> ${{maIntact}} of ${{total}} ${{label}} ETFs hold all MAs — momentum is selective, not broad.`);
+      }} else {{
+        lines.push(`<span class="text-red-400 font-bold">Weak breadth.</span> Only ${{maIntact}} of ${{total}} ${{label}} ETFs hold all MAs — the trend is narrow or breaking down.`);
+      }}
+
+      if (avgWksDown >= 6) {{
+        lines.push(`Average weeks-down at ${{avgWksDown.toFixed(1)}}/12 signals persistent selling pressure.`);
+      }} else if (avgWksDown >= 3) {{
+        lines.push(`Average weeks-down at ${{avgWksDown.toFixed(1)}}/12 — mild deterioration, watch for acceleration.`);
+      }} else {{
+        lines.push(`Average weeks-down at ${{avgWksDown.toFixed(1)}}/12 — buyers remain in control.`);
+      }}
+
+      if (maBroken > total * 0.3) {{
+        lines.push(`<span class="text-red-400">${{maBroken}} ETFs below all MAs</span> — material downside risk in this region.`);
+      }}
+
+      return lines.map(l => `<p class="mb-1">${{l}}</p>`).join('');
+    }}
+
+    function renderCioRegionPanel(regionKey) {{
+      const data = getCioRegionData(regionKey);
+      const {{ etfs, maIntact, fullStack, maBroken, avgWksDown, breadthPct, total, label }} = data;
+
+      const breadthColor = breadthPct >= 70 ? 'emerald' : breadthPct >= 40 ? 'yellow' : 'red';
+
+      return `
+        <!-- Headline Metrics -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div class="bg-emerald-900/20 border border-emerald-700/40 rounded-lg p-3 text-center">
+            <div class="text-2xl font-bold text-emerald-400">${{maIntact}}<span class="text-sm text-slate-500">/${{total}}</span></div>
+            <div class="text-xs text-slate-400">MA Intact (3/3)</div>
+          </div>
+          <div class="bg-indigo-900/20 border border-indigo-700/40 rounded-lg p-3 text-center">
+            <div class="text-2xl font-bold text-indigo-400">${{fullStack}}<span class="text-sm text-slate-500">/${{total}}</span></div>
+            <div class="text-xs text-slate-400">Full Stack (≥2/3)</div>
+          </div>
+          <div class="bg-red-900/20 border border-red-700/40 rounded-lg p-3 text-center">
+            <div class="text-2xl font-bold text-red-400">${{maBroken}}<span class="text-sm text-slate-500">/${{total}}</span></div>
+            <div class="text-xs text-slate-400">MA Broken (0/3)</div>
+          </div>
+          <div class="bg-slate-800 rounded-lg p-3 text-center">
+            <div class="text-2xl font-bold text-${{breadthColor}}-400">${{avgWksDown.toFixed(1)}}</div>
+            <div class="text-xs text-slate-400">Avg Wks Down</div>
+          </div>
+        </div>
+
+        <!-- Z-Score Color Strip -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mb-4">
+          <h4 class="text-sm font-bold text-slate-400 mb-2">Z-Score Heatmap — ${{label}}</h4>
+          ${{renderColorStrip(etfs)}}
+        </div>
+
+        <!-- ETF Cards by MA Tier -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mb-4">
+          <h4 class="text-sm font-bold text-slate-400 mb-3">ETFs by MA Tier</h4>
+          ${{renderEtfCardsByTier(etfs)}}
+        </div>
+
+        <!-- Signal Readings -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+          <h4 class="text-sm font-bold text-slate-400 mb-2">📖 Signal Reading — ${{label}}</h4>
+          <div class="text-sm text-slate-300 leading-relaxed">${{generateSignalReading(data)}}</div>
+        </div>
+      `;
+    }}
+
+    function renderCioOverview() {{
+      // Aggregate breadth across all regions
+      const allData = getCioRegionData('overview');
+      const regionKeys = ['us', 'dm', 'em', 'commodities', 'taa'];
+      const regionDataList = regionKeys.map(k => ({{ key: k, ...getCioRegionData(k) }}));
+
+      // MA Breadth Score verdict
+      const breadthPct = allData.breadthPct;
+      let verdict, verdictColor, verdictIcon;
+      if (breadthPct >= 70) {{
+        verdict = 'FULL INVESTED'; verdictColor = 'emerald'; verdictIcon = '🟢';
+      }} else if (breadthPct >= 50) {{
+        verdict = 'LEAN INVESTED'; verdictColor = 'green'; verdictIcon = '🟡';
+      }} else if (breadthPct >= 30) {{
+        verdict = 'REDUCE EXPOSURE'; verdictColor = 'yellow'; verdictIcon = '🟠';
+      }} else {{
+        verdict = 'RAISE CASH'; verdictColor = 'red'; verdictIcon = '🔴';
+      }}
+
+      // Distribution bar data
+      const ma3 = allData.etfs.filter(e => e.maStatus === 3).length;
+      const ma2 = allData.etfs.filter(e => e.maStatus === 2).length;
+      const ma1 = allData.etfs.filter(e => e.maStatus === 1).length;
+      const ma0 = allData.etfs.filter(e => e.maStatus === 0).length;
+      const t = allData.total || 1;
+
+      // Regional conviction panel
+      const convictionRows = regionDataList.map(r => {{
+        const bPct = r.breadthPct;
+        let signal, sColor;
+        if (bPct >= 70) {{ signal = 'Strong'; sColor = 'emerald'; }}
+        else if (bPct >= 40) {{ signal = 'Mixed'; sColor = 'yellow'; }}
+        else {{ signal = 'Weak'; sColor = 'red'; }}
+        return `<tr class="border-t border-slate-800">
+          <td class="px-3 py-2 font-medium">${{r.label}}</td>
+          <td class="px-3 py-2 text-center mono">${{r.total}}</td>
+          <td class="px-3 py-2 text-center mono text-emerald-400">${{r.maIntact}}</td>
+          <td class="px-3 py-2 text-center mono text-red-400">${{r.maBroken}}</td>
+          <td class="px-3 py-2 text-center mono">${{r.avgWksDown.toFixed(1)}}</td>
+          <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded text-xs font-bold bg-${{sColor}}-900/40 text-${{sColor}}-400">${{signal}}</span></td>
+        </tr>`;
+      }}).join('');
+
+      // Cash vs Exposure playbook
+      let playbookLines = [];
+      if (breadthPct >= 70) {{
+        playbookLines = [
+          'Breadth is strong — stay fully invested in top-ranked momentum names.',
+          'Use position limits (max 15%) and correlation filters to manage concentration.',
+          'Cash allocation: 0-5%. Opportunity cost of sitting out is high.'
+        ];
+      }} else if (breadthPct >= 50) {{
+        playbookLines = [
+          'Breadth is adequate but not commanding — lean invested with selectivity.',
+          'Favor regions showing MA 3/3 breadth above 60%. Trim lagging regions.',
+          'Cash allocation: 10-20%. Keep dry powder for breakdown or re-acceleration.'
+        ];
+      }} else if (breadthPct >= 30) {{
+        playbookLines = [
+          'Breadth is deteriorating — reduce gross exposure and tighten stops.',
+          'Only hold ETFs with MA 3/3 status. Exit broken names promptly.',
+          'Cash allocation: 25-40%. Protect capital; the market is not rewarding broad bets.'
+        ];
+      }} else {{
+        playbookLines = [
+          'Breadth is broken — raise significant cash immediately.',
+          'Sell all positions below MA 2/3. Only keep strongest momentum survivors.',
+          'Cash allocation: 50%+. Capital preservation is the priority until breadth recovers above 40%.'
+        ];
+      }}
+
+      return `
+        <!-- Verdict Banner -->
+        <div class="bg-${{verdictColor}}-900/20 border-2 border-${{verdictColor}}-600/50 rounded-xl p-5 mb-4 text-center">
+          <div class="text-4xl mb-2">${{verdictIcon}}</div>
+          <div class="text-2xl font-bold text-${{verdictColor}}-400">${{verdict}}</div>
+          <div class="text-sm text-slate-400 mt-1">MA Breadth Score: <span class="mono font-bold text-${{verdictColor}}-400">${{breadthPct.toFixed(0)}}%</span> of ETFs hold all 3 MAs</div>
+        </div>
+
+        <!-- Distribution Bars -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mb-4">
+          <h4 class="text-sm font-bold text-slate-400 mb-3">MA Status Distribution</h4>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-emerald-400 w-16">3/3</span>
+              <div class="flex-1 bg-slate-800 rounded-full h-5 overflow-hidden">
+                <div class="bg-emerald-500 h-full rounded-full transition-all" style="width:${{(ma3/t*100).toFixed(1)}}%"></div>
+              </div>
+              <span class="mono text-xs text-slate-400 w-16 text-right">${{ma3}} (${{(ma3/t*100).toFixed(0)}}%)</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-yellow-400 w-16">2/3</span>
+              <div class="flex-1 bg-slate-800 rounded-full h-5 overflow-hidden">
+                <div class="bg-yellow-500 h-full rounded-full transition-all" style="width:${{(ma2/t*100).toFixed(1)}}%"></div>
+              </div>
+              <span class="mono text-xs text-slate-400 w-16 text-right">${{ma2}} (${{(ma2/t*100).toFixed(0)}}%)</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-orange-400 w-16">1/3</span>
+              <div class="flex-1 bg-slate-800 rounded-full h-5 overflow-hidden">
+                <div class="bg-orange-500 h-full rounded-full transition-all" style="width:${{(ma1/t*100).toFixed(1)}}%"></div>
+              </div>
+              <span class="mono text-xs text-slate-400 w-16 text-right">${{ma1}} (${{(ma1/t*100).toFixed(0)}}%)</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-red-400 w-16">0/3</span>
+              <div class="flex-1 bg-slate-800 rounded-full h-5 overflow-hidden">
+                <div class="bg-red-500 h-full rounded-full transition-all" style="width:${{(ma0/t*100).toFixed(1)}}%"></div>
+              </div>
+              <span class="mono text-xs text-slate-400 w-16 text-right">${{ma0}} (${{(ma0/t*100).toFixed(0)}}%)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Regional Conviction Panel -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mb-4">
+          <h4 class="text-sm font-bold text-slate-400 mb-3">Regional Conviction</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-slate-500 text-xs">
+                  <th class="px-3 py-2 text-left">Region</th>
+                  <th class="px-3 py-2 text-center">ETFs</th>
+                  <th class="px-3 py-2 text-center">MA 3/3</th>
+                  <th class="px-3 py-2 text-center">MA 0/3</th>
+                  <th class="px-3 py-2 text-center">Avg Wks↓</th>
+                  <th class="px-3 py-2 text-center">Signal</th>
+                </tr>
+              </thead>
+              <tbody>${{convictionRows}}</tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Z-Score Heatmap (all) -->
+        <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-4 mb-4">
+          <h4 class="text-sm font-bold text-slate-400 mb-2">Z-Score Heatmap — All Regions</h4>
+          ${{renderColorStrip(allData.etfs)}}
+        </div>
+
+        <!-- Cash vs Exposure Playbook -->
+        <div class="bg-${{verdictColor}}-900/15 border border-${{verdictColor}}-700/40 rounded-xl p-5">
+          <h4 class="text-sm font-bold text-${{verdictColor}}-400 mb-3">💰 Cash vs Exposure Playbook</h4>
+          <ul class="space-y-2 text-sm text-slate-300">
+            ${{playbookLines.map(l => `<li class="flex gap-2"><span class="text-${{verdictColor}}-400 mt-0.5">▸</span> ${{l}}</li>`).join('')}}
+          </ul>
+        </div>
+      `;
+    }}
+
+    function renderCioSubTab(tabId) {{
+      const container = document.getElementById('cio-subtab-' + tabId);
+      if (tabId === 'overview') {{
+        container.innerHTML = renderCioOverview();
+      }} else {{
+        container.innerHTML = renderCioRegionPanel(tabId);
+      }}
+    }}
+
     // Initialize
     initFilterDropdowns();
     applyFilters();
     updateConfigSummary();
+    renderCioSubTab('overview');
   </script>
 </body>
 </html>'''
