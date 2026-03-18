@@ -359,7 +359,7 @@
                     <th class="px-3 py-2 text-center">Policy Min %</th>
                     <th class="px-3 py-2 text-center">Policy Max %</th>
                     <th class="px-3 py-2 text-right">Current %</th>
-                    <th class="px-3 py-2 text-right">Variance</th>
+                    <th class="px-3 py-2 text-right">vs Policy</th>
                     <th class="px-3 py-2" style="width:30%">Current vs Policy</th>
                     <th class="px-3 py-2">Holdings</th>
                   </tr>
@@ -18795,13 +18795,13 @@
         var variance = '';
         var varClass = 'text-emerald-400';
         if (current < pMin) {
-          variance = (current - pMin).toFixed(1) + '%';
+          variance = 'Below (' + (current - pMin).toFixed(1) + '%)';
           varClass = 'text-amber-400 font-bold';
-          policyWarnings.push(assetLabels[cls] + ' is UNDERWEIGHT: ' + current.toFixed(1) + '% vs min ' + pMin + '%');
+          policyWarnings.push(assetLabels[cls] + ' is BELOW POLICY: ' + current.toFixed(1) + '% vs min ' + pMin + '%');
         } else if (current > pMax) {
-          variance = '+' + (current - pMax).toFixed(1) + '%';
+          variance = 'Above (+' + (current - pMax).toFixed(1) + '%)';
           varClass = 'text-red-400 font-bold';
-          policyWarnings.push(assetLabels[cls] + ' is OVERWEIGHT: ' + current.toFixed(1) + '% vs max ' + pMax + '%');
+          policyWarnings.push(assetLabels[cls] + ' is ABOVE POLICY: ' + current.toFixed(1) + '% vs max ' + pMax + '%');
         } else {
           variance = 'In range';
           varClass = 'text-emerald-400';
@@ -18838,7 +18838,7 @@
       if (policyWarnings.length > 0) {
         warnHtml = '<div class="space-y-1">';
         policyWarnings.forEach(function(w) {
-          var isOver = w.includes('OVERWEIGHT');
+          var isOver = w.includes('ABOVE POLICY');
           warnHtml += '<div class="text-xs ' + (isOver ? 'text-red-400 bg-red-900/20 border border-red-700/30' : 'text-amber-400 bg-amber-900/20 border border-amber-700/30') + ' rounded px-2 py-1">' +
             (isOver ? '🔴 ' : '🟡 ') + w + '</div>';
         });
