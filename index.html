@@ -25,6 +25,7 @@
     <div class="flex gap-2 mb-6 flex-wrap" id="tabs">
       <button onclick="showTab('signals')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-indigo-600 text-white" data-tab="signals">📡 Screener</button>
       <button onclick="showTab('portfolio')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="portfolio">💼 Portfolio</button>
+      <button onclick="showTab('analyzer')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="analyzer">🔍 Analyzer</button>
       <button onclick="showTab('cio')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="cio">🏛️ CIO Signals</button>
       <button onclick="showTab('strategy')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="strategy">🎯 Strategy</button>
       <button onclick="showTab('rules')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="rules">⚙️ Settings</button>
@@ -261,6 +262,110 @@
           <div class="text-xs text-slate-500 bg-slate-800 p-2 rounded mono">
             Score 0-100 | Parabolic combo (Z &gt; 2.5 + low weeks down + high slope) applies 30% penalty | All ETFs ranked, top 20 highlighted
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== ANALYZER TAB ===================== -->
+    <div id="tab-analyzer" class="tab-content hidden">
+      <div class="space-y-6">
+
+        <!-- Portfolio Input -->
+        <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold">📋 Enter Your Current Portfolio</h3>
+            <div class="flex gap-2">
+              <button onclick="addPortfolioRow()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm transition-colors">+ Add Position</button>
+              <button onclick="loadSamplePortfolio()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">Load Sample</button>
+              <button onclick="clearMyPortfolio()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">Clear All</button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500 mb-3">Enter tickers from the screener universe and their portfolio weight (%). Weights should total 100%. Unrecognized tickers will be flagged.</p>
+          <div id="portfolio-input-rows" class="space-y-2">
+            <!-- Dynamic rows inserted here -->
+          </div>
+          <div class="mt-3 flex items-center justify-between">
+            <div class="text-sm">
+              <span class="text-slate-400">Total Weight:</span>
+              <span id="total-weight" class="font-bold mono text-indigo-400">0%</span>
+              <span id="weight-warning" class="text-red-400 text-xs ml-2 hidden">Must equal 100%</span>
+            </div>
+            <button onclick="analyzeMyPortfolio()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-medium transition-colors">🔍 Analyze Portfolio</button>
+          </div>
+        </div>
+
+        <!-- Analysis Results (hidden until analyzed) -->
+        <div id="analyzer-results" class="hidden space-y-6">
+
+          <!-- Portfolio Health Summary -->
+          <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+            <h3 class="font-bold mb-4">📊 Portfolio Health Summary</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" id="analyzer-stats"></div>
+          </div>
+
+          <!-- Holdings Scorecard -->
+          <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+            <h3 class="font-bold mb-4">🎯 Holdings Scorecard</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-left text-slate-400 border-b border-slate-700">
+                    <th class="px-3 py-2">Ticker</th>
+                    <th class="px-3 py-2">Name</th>
+                    <th class="px-3 py-2 text-right">Weight</th>
+                    <th class="px-3 py-2 text-right">Score</th>
+                    <th class="px-3 py-2 text-right">6M Ret</th>
+                    <th class="px-3 py-2 text-right">Sortino</th>
+                    <th class="px-3 py-2 text-right">Wks Down</th>
+                    <th class="px-3 py-2 text-right">Z-Score</th>
+                    <th class="px-3 py-2 text-center">MA</th>
+                    <th class="px-3 py-2 text-center">Verdict</th>
+                  </tr>
+                </thead>
+                <tbody id="analyzer-holdings-table"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Score Distribution -->
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+              <h3 class="font-bold mb-4">📈 Score Distribution</h3>
+              <div id="score-distribution"></div>
+            </div>
+            <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+              <h3 class="font-bold mb-4">🗺️ Diversification Map</h3>
+              <div id="diversification-map"></div>
+            </div>
+          </div>
+
+          <!-- Trim Suggestions -->
+          <div class="bg-red-900/15 border border-red-700/40 rounded-xl p-4">
+            <h3 class="font-bold text-red-400 mb-3">✂️ Trim / Watch List — Weakening Scores</h3>
+            <p class="text-xs text-slate-500 mb-3">Holdings with deteriorating momentum signals. Consider reducing exposure or setting stop-losses.</p>
+            <div id="trim-suggestions"></div>
+          </div>
+
+          <!-- Missing Opportunities -->
+          <div class="bg-emerald-900/15 border border-emerald-700/40 rounded-xl p-4">
+            <h3 class="font-bold text-emerald-400 mb-3">💡 Missing Opportunities — High Score + MA 3/3</h3>
+            <p class="text-xs text-slate-500 mb-3">Top-ranked ETFs with full MA alignment that are NOT in your portfolio. Low correlation to your current holdings preferred.</p>
+            <div id="missing-opportunities"></div>
+          </div>
+
+          <!-- Correlation Heatmap -->
+          <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+            <h3 class="font-bold mb-3">🔗 Pairwise Correlation Check</h3>
+            <p class="text-xs text-slate-500 mb-3">Red flags where correlation > 0.70 — overlapping exposures reduce diversification benefit.</p>
+            <div id="correlation-matrix"></div>
+          </div>
+
+          <!-- Strategy Audit -->
+          <div class="bg-indigo-900/15 border border-indigo-700/40 rounded-xl p-4">
+            <h3 class="font-bold text-indigo-400 mb-4">📋 Risk Manager's Strategy Audit</h3>
+            <div id="strategy-audit" class="grid md:grid-cols-2 gap-4"></div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -18269,11 +18374,512 @@
       }
     }
 
+    // ========== PORTFOLIO ANALYZER ==========
+
+    let myPortfolioRows = [];
+    let analyzerRowId = 0;
+
+    function addPortfolioRow(ticker = '', weight = '') {
+      const id = analyzerRowId++;
+      myPortfolioRows.push(id);
+      const container = document.getElementById('portfolio-input-rows');
+
+      // Build ticker datalist options from universe
+      const tickerOptions = rankedETFs.filter(e => e.isETF).map(e => e.ticker).sort();
+
+      const row = document.createElement('div');
+      row.id = `prow-${id}`;
+      row.className = 'flex items-center gap-3';
+      row.innerHTML = `
+        <input type="text" list="ticker-list" placeholder="Ticker (e.g. SPY)" value="${ticker}"
+               class="analyzer-ticker bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm w-40 uppercase mono focus:outline-none focus:border-indigo-500"
+               oninput="updateTotalWeight()">
+        <input type="number" placeholder="Weight %" value="${weight}" min="0" max="100" step="1"
+               class="analyzer-weight bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm w-24 mono text-center focus:outline-none focus:border-indigo-500"
+               oninput="updateTotalWeight()">
+        <span class="analyzer-match text-xs text-slate-500 w-48 truncate"></span>
+        <button onclick="removePortfolioRow(${id})" class="text-slate-500 hover:text-red-400 transition-colors text-lg">&times;</button>
+      `;
+      container.appendChild(row);
+
+      // Ensure datalist exists
+      if (!document.getElementById('ticker-list')) {
+        const dl = document.createElement('datalist');
+        dl.id = 'ticker-list';
+        tickerOptions.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t;
+          dl.appendChild(opt);
+        });
+        container.appendChild(dl);
+      }
+
+      updateTotalWeight();
+    }
+
+    function removePortfolioRow(id) {
+      const row = document.getElementById(`prow-${id}`);
+      if (row) row.remove();
+      myPortfolioRows = myPortfolioRows.filter(r => r !== id);
+      updateTotalWeight();
+    }
+
+    function clearMyPortfolio() {
+      document.getElementById('portfolio-input-rows').innerHTML = '';
+      myPortfolioRows = [];
+      analyzerRowId = 0;
+      document.getElementById('analyzer-results').classList.add('hidden');
+      updateTotalWeight();
+    }
+
+    function loadSamplePortfolio() {
+      clearMyPortfolio();
+      // Pick top 8 from current ranked list as sample
+      const sample = rankedETFs.filter(e => e.isETF).slice(0, 8);
+      const w = Math.floor(100 / sample.length);
+      sample.forEach((e, i) => {
+        addPortfolioRow(e.ticker, i === sample.length - 1 ? 100 - w * (sample.length - 1) : w);
+      });
+    }
+
+    function updateTotalWeight() {
+      const rows = document.querySelectorAll('#portfolio-input-rows > div');
+      let total = 0;
+      rows.forEach(row => {
+        const ticker = row.querySelector('.analyzer-ticker')?.value.trim().toUpperCase() || '';
+        const weight = parseFloat(row.querySelector('.analyzer-weight')?.value) || 0;
+        const matchEl = row.querySelector('.analyzer-match');
+        total += weight;
+
+        if (ticker && matchEl) {
+          const found = rankedETFs.find(e => e.ticker.toUpperCase() === ticker);
+          if (found) {
+            matchEl.textContent = `${found.name || found.sector} — Score: ${found.score.toFixed(1)}`;
+            matchEl.className = 'analyzer-match text-xs text-emerald-400 w-48 truncate';
+          } else {
+            matchEl.textContent = 'Not in universe';
+            matchEl.className = 'analyzer-match text-xs text-red-400 w-48 truncate';
+          }
+        }
+      });
+      document.getElementById('total-weight').textContent = total.toFixed(0) + '%';
+      const warn = document.getElementById('weight-warning');
+      if (total > 0 && Math.abs(total - 100) > 1) {
+        warn.classList.remove('hidden');
+      } else {
+        warn.classList.add('hidden');
+      }
+    }
+
+    function getMyPortfolioHoldings() {
+      const rows = document.querySelectorAll('#portfolio-input-rows > div');
+      const holdings = [];
+      rows.forEach(row => {
+        const ticker = row.querySelector('.analyzer-ticker')?.value.trim().toUpperCase() || '';
+        const weight = parseFloat(row.querySelector('.analyzer-weight')?.value) || 0;
+        if (!ticker || weight <= 0) return;
+        const etf = rankedETFs.find(e => e.ticker.toUpperCase() === ticker);
+        holdings.push({ ticker, weight, etf });
+      });
+      return holdings;
+    }
+
+    function getScoreColor(score) {
+      if (score >= 65) return 'text-emerald-400';
+      if (score >= 50) return 'text-indigo-400';
+      if (score >= 35) return 'text-amber-400';
+      return 'text-red-400';
+    }
+
+    function getScoreBg(score) {
+      if (score >= 65) return 'bg-emerald-900/30 border-emerald-700/40';
+      if (score >= 50) return 'bg-indigo-900/30 border-indigo-700/40';
+      if (score >= 35) return 'bg-amber-900/30 border-amber-700/40';
+      return 'bg-red-900/30 border-red-700/40';
+    }
+
+    function getVerdict(etf) {
+      if (!etf) return { text: 'Unknown', color: 'text-slate-500', icon: '❓' };
+      if (etf.score >= 65 && etf.maStatus === 3) return { text: 'Strong Hold', color: 'text-emerald-400', icon: '✅' };
+      if (etf.score >= 50 && etf.maStatus >= 2) return { text: 'Hold', color: 'text-indigo-400', icon: '👍' };
+      if (etf.score >= 35 && etf.maStatus >= 1) return { text: 'Watch', color: 'text-amber-400', icon: '👀' };
+      if (etf.maStatus === 0) return { text: 'Trim', color: 'text-red-400', icon: '✂️' };
+      if (etf.score < 35) return { text: 'Trim', color: 'text-red-400', icon: '✂️' };
+      return { text: 'Watch', color: 'text-amber-400', icon: '👀' };
+    }
+
+    function analyzeMyPortfolio() {
+      const holdings = getMyPortfolioHoldings();
+      if (holdings.length === 0) return;
+
+      const matched = holdings.filter(h => h.etf);
+      const unmatched = holdings.filter(h => !h.etf);
+      const totalWeight = holdings.reduce((s, h) => s + h.weight, 0);
+
+      // === Stats ===
+      const avgScore = matched.length > 0 ? matched.reduce((s, h) => s + h.etf.score * h.weight, 0) / matched.reduce((s, h) => s + h.weight, 0) : 0;
+      const ma3Count = matched.filter(h => h.etf.maStatus === 3).length;
+      const ma0Count = matched.filter(h => h.etf.maStatus === 0).length;
+      const avgWksDown = matched.length > 0 ? matched.reduce((s, h) => s + h.etf.weeksDown, 0) / matched.length : 0;
+      const countries = new Set(matched.map(h => h.etf.country)).size;
+      const sectors = new Set(matched.map(h => h.etf.sector)).size;
+      const maxWt = Math.max(...holdings.map(h => h.weight));
+
+      let avgCorr = 0, corrCount = 0, highCorrPairs = [];
+      for (let i = 0; i < matched.length; i++) {
+        for (let j = i + 1; j < matched.length; j++) {
+          const c = getCorrelation(matched[i].ticker, matched[j].ticker);
+          avgCorr += c;
+          corrCount++;
+          if (c > 0.70) highCorrPairs.push({ a: matched[i].ticker, b: matched[j].ticker, corr: c });
+        }
+      }
+      avgCorr = corrCount > 0 ? avgCorr / corrCount : 0;
+
+      // Weighted score color
+      let healthLabel, healthColor;
+      if (avgScore >= 60) { healthLabel = 'Healthy'; healthColor = 'emerald'; }
+      else if (avgScore >= 45) { healthLabel = 'Fair'; healthColor = 'amber'; }
+      else { healthLabel = 'Weak'; healthColor = 'red'; }
+
+      document.getElementById('analyzer-stats').innerHTML = `
+        <div class="bg-slate-800 rounded-lg p-3 text-center">
+          <div class="text-xl font-bold text-${healthColor}-400">${avgScore.toFixed(1)}</div>
+          <div class="text-xs text-slate-400">Wtd Avg Score</div>
+          <div class="text-xs text-${healthColor}-400">${healthLabel}</div>
+        </div>
+        <div class="bg-slate-800 rounded-lg p-3 text-center">
+          <div class="text-xl font-bold text-emerald-400">${ma3Count}/${matched.length}</div>
+          <div class="text-xs text-slate-400">MA 3/3</div>
+        </div>
+        <div class="bg-slate-800 rounded-lg p-3 text-center">
+          <div class="text-xl font-bold ${ma0Count > 0 ? 'text-red-400' : 'text-slate-400'}">${ma0Count}</div>
+          <div class="text-xs text-slate-400">MA 0/3</div>
+        </div>
+        <div class="bg-slate-800 rounded-lg p-3 text-center">
+          <div class="text-xl font-bold text-amber-400">${avgCorr.toFixed(2)}</div>
+          <div class="text-xs text-slate-400">Avg Corr</div>
+        </div>
+        <div class="bg-slate-800 rounded-lg p-3 text-center">
+          <div class="text-xl font-bold text-cyan-400">${countries}</div>
+          <div class="text-xs text-slate-400">Countries</div>
+        </div>
+        <div class="bg-slate-800 rounded-lg p-3 text-center">
+          <div class="text-xl font-bold text-purple-400">${sectors}</div>
+          <div class="text-xs text-slate-400">Sectors</div>
+        </div>
+      `;
+
+      // === Holdings Scorecard Table ===
+      const sortedHoldings = [...holdings].sort((a, b) => {
+        if (a.etf && b.etf) return b.etf.score - a.etf.score;
+        if (a.etf) return -1;
+        return 1;
+      });
+
+      document.getElementById('analyzer-holdings-table').innerHTML = sortedHoldings.map(h => {
+        if (!h.etf) {
+          return `<tr class="border-t border-slate-800 bg-red-900/10">
+            <td class="px-3 py-2 font-bold">${h.ticker}</td>
+            <td class="px-3 py-2 text-xs text-red-400" colspan="9">Not found in screener universe</td>
+          </tr>`;
+        }
+        const e = h.etf;
+        const v = getVerdict(e);
+        return `<tr class="border-t border-slate-800">
+          <td class="px-3 py-2 font-bold">${h.ticker}</td>
+          <td class="px-3 py-2 text-xs text-slate-400 max-w-[160px] truncate">${e.name || e.sector}</td>
+          <td class="px-3 py-2 text-right mono text-amber-400">${h.weight.toFixed(1)}%</td>
+          <td class="px-3 py-2 text-right mono font-bold ${getScoreColor(e.score)}">${e.score.toFixed(1)}</td>
+          <td class="px-3 py-2 text-right mono ${e.return6m >= 0 ? 'text-emerald-400' : 'text-red-400'}">${e.return6m >= 0 ? '+' : ''}${e.return6m.toFixed(1)}%</td>
+          <td class="px-3 py-2 text-right mono">${e.sortino.toFixed(2)}</td>
+          <td class="px-3 py-2 text-right mono ${e.weeksDown >= 6 ? 'text-red-400' : ''}">${e.weeksDown}/12</td>
+          <td class="px-3 py-2 text-right mono ${e.zScore > 3 ? 'text-red-400' : e.zScore > 2 ? 'text-orange-400' : ''}">${e.zScore.toFixed(1)}</td>
+          <td class="px-3 py-2 text-center ${e.maStatus === 3 ? 'text-emerald-400' : e.maStatus >= 2 ? 'text-yellow-400' : e.maStatus === 1 ? 'text-orange-400' : 'text-red-400'}">${e.maStatus}/3</td>
+          <td class="px-3 py-2 text-center"><span class="${v.color} font-medium">${v.icon} ${v.text}</span></td>
+        </tr>`;
+      }).join('');
+
+      // === Score Distribution ===
+      const buckets = [
+        { label: '80-100', min: 80, max: 100, color: 'bg-emerald-500' },
+        { label: '65-80', min: 65, max: 80, color: 'bg-emerald-600' },
+        { label: '50-65', min: 50, max: 65, color: 'bg-indigo-500' },
+        { label: '35-50', min: 35, max: 50, color: 'bg-amber-500' },
+        { label: '20-35', min: 20, max: 35, color: 'bg-orange-500' },
+        { label: '0-20', min: 0, max: 20, color: 'bg-red-500' }
+      ];
+
+      const maxBucketWeight = Math.max(...buckets.map(b => {
+        return matched.filter(h => h.etf.score >= b.min && h.etf.score < b.max).reduce((s, h) => s + h.weight, 0);
+      }), 1);
+
+      document.getElementById('score-distribution').innerHTML = `
+        <div class="space-y-2">
+          ${buckets.map(b => {
+            const bucketHoldings = matched.filter(h => h.etf.score >= b.min && (b.max === 100 ? h.etf.score <= b.max : h.etf.score < b.max));
+            const bucketWeight = bucketHoldings.reduce((s, h) => s + h.weight, 0);
+            const barWidth = maxBucketWeight > 0 ? (bucketWeight / maxBucketWeight * 100) : 0;
+            const tickers = bucketHoldings.map(h => h.ticker).join(', ');
+            return `<div class="flex items-center gap-3">
+              <span class="text-xs text-slate-400 w-14 text-right mono">${b.label}</span>
+              <div class="flex-1 bg-slate-800 rounded-full h-5 overflow-hidden relative">
+                <div class="${b.color} h-full rounded-full transition-all" style="width:${barWidth}%"></div>
+                ${bucketWeight > 0 ? `<span class="absolute inset-0 flex items-center px-2 text-xs mono text-white font-bold">${bucketWeight.toFixed(0)}% — ${tickers}</span>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="mt-3 text-xs text-slate-500">Weight of portfolio allocated to each score bucket</div>
+      `;
+
+      // === Diversification Map ===
+      const byCountry = {};
+      const bySector = {};
+      matched.forEach(h => {
+        byCountry[h.etf.country] = (byCountry[h.etf.country] || 0) + h.weight;
+        bySector[h.etf.sector] = (bySector[h.etf.sector] || 0) + h.weight;
+      });
+
+      const countryItems = Object.entries(byCountry).sort((a, b) => b[1] - a[1]);
+      const sectorItems = Object.entries(bySector).sort((a, b) => b[1] - a[1]);
+
+      document.getElementById('diversification-map').innerHTML = `
+        <div class="mb-4">
+          <div class="text-xs text-slate-400 font-bold mb-2">By Region/Country</div>
+          <div class="flex flex-wrap gap-2">
+            ${countryItems.map(([c, w]) => `<span class="px-2 py-1 ${w > 25 ? 'bg-red-900/40 border border-red-700/50 text-red-300' : 'bg-slate-800 text-slate-300'} rounded text-xs mono">${c}: ${w.toFixed(0)}%</span>`).join('')}
+          </div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 font-bold mb-2">By Sector</div>
+          <div class="flex flex-wrap gap-2">
+            ${sectorItems.map(([s, w]) => `<span class="px-2 py-1 ${w > 25 ? 'bg-red-900/40 border border-red-700/50 text-red-300' : 'bg-slate-800 text-slate-300'} rounded text-xs mono">${s}: ${w.toFixed(0)}%</span>`).join('')}
+          </div>
+        </div>
+        ${countryItems.length <= 2 ? '<div class="mt-3 text-xs text-amber-400">⚠️ Low geographic diversification — consider adding international exposure</div>' : ''}
+        ${sectorItems.length <= 2 ? '<div class="mt-2 text-xs text-amber-400">⚠️ Low sector diversification — concentrated sector risk</div>' : ''}
+      `;
+
+      // === Trim Suggestions ===
+      const trimCandidates = matched.filter(h => {
+        const e = h.etf;
+        return e.score < 35 || e.maStatus === 0 || (e.weeksDown >= 6 && e.maStatus <= 1) || (e.zScore > 3 && e.score < 50);
+      }).sort((a, b) => a.etf.score - b.etf.score);
+
+      const watchCandidates = matched.filter(h => {
+        const e = h.etf;
+        return !trimCandidates.includes(h) && (e.score < 50 || e.maStatus <= 1 || e.weeksDown >= 5);
+      }).sort((a, b) => a.etf.score - b.etf.score);
+
+      if (trimCandidates.length === 0 && watchCandidates.length === 0) {
+        document.getElementById('trim-suggestions').innerHTML = '<div class="text-sm text-emerald-400">All holdings show healthy momentum — no immediate trim candidates.</div>';
+      } else {
+        document.getElementById('trim-suggestions').innerHTML = `
+          ${trimCandidates.length > 0 ? `
+            <div class="mb-4">
+              <div class="text-sm font-bold text-red-400 mb-2">🔴 Trim — Weakening Momentum</div>
+              <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                ${trimCandidates.map(h => {
+                  const e = h.etf;
+                  const reasons = [];
+                  if (e.score < 35) reasons.push(`Low score (${e.score.toFixed(1)})`);
+                  if (e.maStatus === 0) reasons.push('Below all MAs');
+                  if (e.weeksDown >= 6) reasons.push(`${e.weeksDown}/12 weeks down`);
+                  if (e.zScore > 3 && e.score < 50) reasons.push(`High Z (${e.zScore.toFixed(1)}) + weak score`);
+                  return `<div class="bg-red-900/20 border border-red-700/30 rounded-lg p-3">
+                    <div class="flex justify-between">
+                      <span class="font-bold">${h.ticker}</span>
+                      <span class="text-xs text-amber-400 mono">${h.weight.toFixed(1)}% alloc</span>
+                    </div>
+                    <div class="text-xs text-slate-400 mt-1">${e.name || e.sector}</div>
+                    <div class="text-xs text-red-300 mt-2">${reasons.join(' · ')}</div>
+                    <div class="text-xs text-slate-500 mt-1">Score: ${e.score.toFixed(1)} | MA: ${e.maStatus}/3 | Sortino: ${e.sortino.toFixed(2)}</div>
+                  </div>`;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
+          ${watchCandidates.length > 0 ? `
+            <div>
+              <div class="text-sm font-bold text-amber-400 mb-2">🟡 Watch — Early Deterioration</div>
+              <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                ${watchCandidates.map(h => {
+                  const e = h.etf;
+                  const reasons = [];
+                  if (e.score < 50) reasons.push(`Middling score (${e.score.toFixed(1)})`);
+                  if (e.maStatus <= 1) reasons.push(`Weak MA (${e.maStatus}/3)`);
+                  if (e.weeksDown >= 5) reasons.push(`${e.weeksDown}/12 weeks down`);
+                  return `<div class="bg-amber-900/20 border border-amber-700/30 rounded-lg p-3">
+                    <div class="flex justify-between">
+                      <span class="font-bold">${h.ticker}</span>
+                      <span class="text-xs text-amber-400 mono">${h.weight.toFixed(1)}% alloc</span>
+                    </div>
+                    <div class="text-xs text-slate-400 mt-1">${e.name || e.sector}</div>
+                    <div class="text-xs text-amber-300 mt-2">${reasons.join(' · ')}</div>
+                  </div>`;
+                }).join('')}
+              </div>
+            </div>
+          ` : ''}
+        `;
+      }
+
+      // === Missing Opportunities ===
+      const heldTickers = new Set(holdings.map(h => h.ticker.toUpperCase()));
+      const opportunities = rankedETFs
+        .filter(e => e.isETF && e.maStatus === 3 && e.score >= 55 && !heldTickers.has(e.ticker.toUpperCase()))
+        .slice(0, 12)
+        .map(e => {
+          // Check avg correlation to current holdings
+          let avgCorrToPortfolio = 0;
+          if (matched.length > 0) {
+            avgCorrToPortfolio = matched.reduce((s, h) => s + getCorrelation(e.ticker, h.ticker), 0) / matched.length;
+          }
+          return { ...e, avgCorrToPortfolio };
+        })
+        .sort((a, b) => {
+          // Sort by: low correlation first, then high score
+          const corrDiff = a.avgCorrToPortfolio - b.avgCorrToPortfolio;
+          if (Math.abs(corrDiff) > 0.1) return corrDiff;
+          return b.score - a.score;
+        });
+
+      if (opportunities.length === 0) {
+        document.getElementById('missing-opportunities').innerHTML = '<div class="text-sm text-slate-400">No high-conviction opportunities outside your current holdings.</div>';
+      } else {
+        document.getElementById('missing-opportunities').innerHTML = `
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+            ${opportunities.map(e => {
+              const corrLabel = e.avgCorrToPortfolio < 0.3 ? 'Low' : e.avgCorrToPortfolio < 0.6 ? 'Moderate' : 'High';
+              const corrColor = e.avgCorrToPortfolio < 0.3 ? 'text-emerald-400' : e.avgCorrToPortfolio < 0.6 ? 'text-amber-400' : 'text-red-400';
+              return `<div class="bg-emerald-900/20 border border-emerald-700/30 rounded-lg p-3">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <span class="font-bold">${e.ticker}</span>
+                    <span class="text-xs text-emerald-400 ml-1">MA 3/3</span>
+                  </div>
+                  <span class="text-sm font-bold ${getScoreColor(e.score)}">${e.score.toFixed(1)}</span>
+                </div>
+                <div class="text-xs text-slate-400 mt-1">${e.name || e.sector} · ${e.country}</div>
+                <div class="grid grid-cols-2 gap-x-3 mt-2 text-xs">
+                  <span class="text-slate-500">6M Return</span><span class="${e.return6m >= 0 ? 'text-emerald-400' : 'text-red-400'} text-right">${e.return6m >= 0 ? '+' : ''}${e.return6m.toFixed(1)}%</span>
+                  <span class="text-slate-500">Sortino</span><span class="text-right">${e.sortino.toFixed(2)}</span>
+                  <span class="text-slate-500">Corr to Port</span><span class="${corrColor} text-right">${e.avgCorrToPortfolio.toFixed(2)} (${corrLabel})</span>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      // === Correlation Matrix ===
+      if (matched.length >= 2) {
+        const tickers = matched.map(h => h.ticker);
+        let matrixHtml = '<div class="overflow-x-auto"><table class="text-xs mono"><thead><tr><th class="px-2 py-1"></th>';
+        tickers.forEach(t => { matrixHtml += `<th class="px-2 py-1 text-center">${t}</th>`; });
+        matrixHtml += '</tr></thead><tbody>';
+        tickers.forEach((t1, i) => {
+          matrixHtml += `<tr><td class="px-2 py-1 font-bold text-slate-300">${t1}</td>`;
+          tickers.forEach((t2, j) => {
+            if (i === j) {
+              matrixHtml += '<td class="px-2 py-1 text-center text-slate-600">—</td>';
+            } else {
+              const c = getCorrelation(t1, t2);
+              const cellColor = c > 0.70 ? 'bg-red-900/40 text-red-400 font-bold' : c > 0.50 ? 'bg-amber-900/20 text-amber-400' : 'text-slate-400';
+              matrixHtml += `<td class="px-2 py-1 text-center ${cellColor}">${c.toFixed(2)}</td>`;
+            }
+          });
+          matrixHtml += '</tr>';
+        });
+        matrixHtml += '</tbody></table></div>';
+
+        if (highCorrPairs.length > 0) {
+          matrixHtml += `<div class="mt-3 space-y-1">
+            ${highCorrPairs.map(p => `<div class="text-xs text-red-400">⚠️ ${p.a} — ${p.b}: ${p.corr.toFixed(2)} correlation — overlapping exposure, consider trimming one</div>`).join('')}
+          </div>`;
+        }
+
+        document.getElementById('correlation-matrix').innerHTML = matrixHtml;
+      } else {
+        document.getElementById('correlation-matrix').innerHTML = '<div class="text-sm text-slate-500">Need at least 2 matched holdings for correlation analysis.</div>';
+      }
+
+      // === Strategy Audit ===
+      const checks = [];
+
+      // 1. Momentum + Diversification
+      const divChecks = [];
+      divChecks.push({ pass: avgScore >= 50, text: `Quality momentum avg score: ${avgScore.toFixed(1)} ${avgScore >= 50 ? '(good)' : '(below 50 — weak quality)'}` });
+      divChecks.push({ pass: avgCorr < 0.50, text: `Avg pairwise correlation: ${avgCorr.toFixed(2)} ${avgCorr < 0.50 ? '(well diversified)' : avgCorr < 0.70 ? '(moderate overlap)' : '(too correlated!)'}` });
+      divChecks.push({ pass: countries >= 3, text: `${countries} countries ${countries >= 3 ? '(diversified)' : '(add international)'}` });
+      divChecks.push({ pass: sectors >= 3, text: `${sectors} sectors ${sectors >= 3 ? '(diversified)' : '(concentrated risk)'}` });
+      divChecks.push({ pass: highCorrPairs.length === 0, text: highCorrPairs.length === 0 ? 'No highly correlated pairs (>0.70)' : `${highCorrPairs.length} pair(s) with correlation > 0.70` });
+
+      // 2. Many Small Bets
+      const smallBetChecks = [];
+      smallBetChecks.push({ pass: maxWt <= 15, text: `Max weight: ${maxWt.toFixed(0)}% ${maxWt <= 15 ? '(within 15% limit)' : '(over 15% — too concentrated)'}` });
+      smallBetChecks.push({ pass: holdings.length >= 6 && holdings.length <= 10, text: `${holdings.length} positions ${holdings.length >= 6 && holdings.length <= 10 ? '(ideal 6-10 range)' : holdings.length < 6 ? '(below 6 — add more)' : '(above 10 — consider trimming)'}` });
+      const weightStdDev = Math.sqrt(holdings.reduce((s, h) => s + Math.pow(h.weight - 100 / holdings.length, 2), 0) / holdings.length);
+      smallBetChecks.push({ pass: weightStdDev < 5, text: `Weight spread: ${weightStdDev < 5 ? 'Near equal-weight (good)' : 'Uneven — consider rebalancing'}` });
+
+      // 3. Quality Over Raw Return
+      const qualityChecks = [];
+      const avgSortino = matched.length > 0 ? matched.reduce((s, h) => s + h.etf.sortino, 0) / matched.length : 0;
+      qualityChecks.push({ pass: avgSortino >= 0.5, text: `Avg Sortino: ${avgSortino.toFixed(2)} ${avgSortino >= 0.5 ? '(quality trend)' : '(poor risk-adjusted return)'}` });
+      qualityChecks.push({ pass: avgWksDown < 4, text: `Avg weeks down: ${avgWksDown.toFixed(1)}/12 ${avgWksDown < 4 ? '(steady)' : '(deteriorating)'}` });
+      const parabolicCount = matched.filter(h => h.etf.zScore > 2.5 && h.etf.weeksDown < 3 && h.etf.slope > 0.4).length;
+      qualityChecks.push({ pass: parabolicCount === 0, text: parabolicCount === 0 ? 'No parabolic holdings' : `${parabolicCount} parabolic holding(s) — extended risk` });
+      const choppyCount = matched.filter(h => h.etf.weeksDown >= 5 && h.etf.sortino < 0.3).length;
+      qualityChecks.push({ pass: choppyCount === 0, text: choppyCount === 0 ? 'No choppy, low-quality trends' : `${choppyCount} choppy trend(s) — consider swapping` });
+
+      // 4. Flexible Screening
+      const flexChecks = [];
+      flexChecks.push({ pass: ma3Count >= Math.ceil(matched.length * 0.5), text: `${ma3Count}/${matched.length} holdings with MA 3/3 ${ma3Count >= Math.ceil(matched.length * 0.5) ? '(majority aligned)' : '(under half — trend support weakening)'}` });
+      flexChecks.push({ pass: unmatched.length === 0, text: unmatched.length === 0 ? 'All tickers in screener universe' : `${unmatched.length} ticker(s) not in universe — can\'t score: ${unmatched.map(h => h.ticker).join(', ')}` });
+      const trimCount = trimCandidates.length;
+      flexChecks.push({ pass: trimCount === 0, text: trimCount === 0 ? 'No immediate trim signals' : `${trimCount} holding(s) flagged for trim — review above` });
+
+      const auditSections = [
+        { title: '1. Momentum + Diversification', color: 'emerald', checks: divChecks },
+        { title: '2. Many Small Bets', color: 'amber', checks: smallBetChecks },
+        { title: '3. Quality Over Raw Return', color: 'cyan', checks: qualityChecks },
+        { title: '4. Flexible Screening', color: 'purple', checks: flexChecks }
+      ];
+
+      document.getElementById('strategy-audit').innerHTML = auditSections.map(s => {
+        const passCount = s.checks.filter(c => c.pass).length;
+        const pct = Math.round(passCount / s.checks.length * 100);
+        const pctColor = pct >= 80 ? 'text-emerald-400' : pct >= 50 ? 'text-amber-400' : 'text-red-400';
+        return `<div class="bg-slate-800/50 rounded-lg p-4">
+          <div class="flex justify-between items-center mb-3">
+            <div class="font-bold text-${s.color}-400">${s.title}</div>
+            <span class="${pctColor} text-sm font-bold">${passCount}/${s.checks.length}</span>
+          </div>
+          <div class="space-y-2">
+            ${s.checks.map(c => `<div class="flex gap-2 text-sm">
+              <span class="${c.pass ? 'text-emerald-400' : 'text-red-400'}">${c.pass ? '✓' : '✗'}</span>
+              <span class="text-slate-300">${c.text}</span>
+            </div>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+
+      // Show results
+      document.getElementById('analyzer-results').classList.remove('hidden');
+    }
+
+    // Initialize with a few empty rows
+    function initAnalyzer() {
+      for (let i = 0; i < 4; i++) addPortfolioRow();
+    }
+
     // Initialize
     initFilterDropdowns();
     applyFilters();
     updateConfigSummary();
     renderCioSubTab('overview');
+    initAnalyzer();
   </script>
 </body>
 </html>
