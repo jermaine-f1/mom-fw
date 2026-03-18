@@ -277,10 +277,12 @@
             <div class="flex gap-2">
               <button onclick="addPortfolioRow()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm transition-colors">+ Add Position</button>
               <button onclick="loadSamplePortfolio()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">Load Sample</button>
+              <button onclick="document.getElementById('csv-upload').click()" class="px-3 py-1.5 bg-cyan-700 hover:bg-cyan-600 rounded-lg text-sm transition-colors">📄 Load CSV</button>
+              <input type="file" id="csv-upload" accept=".csv" class="hidden" onchange="loadCSVFile(event)">
               <button onclick="clearMyPortfolio()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">Clear All</button>
             </div>
           </div>
-          <p class="text-xs text-slate-500 mb-3">Enter tickers from the screener universe and their portfolio weight (%). Weights should total 100%. Unrecognized tickers will be flagged.</p>
+          <p class="text-xs text-slate-500 mb-3">Enter tickers from the screener universe and their portfolio weight (%). Weights should total 100%. Unrecognized tickers will be flagged. CSV format: <span class="mono text-slate-400">ticker,weight</span> (header row optional).</p>
           <div id="portfolio-input-rows" class="space-y-2">
             <!-- Dynamic rows inserted here -->
           </div>
@@ -327,11 +329,23 @@
             </div>
           </div>
 
-          <!-- Score Distribution -->
+          <!-- Score Distribution + MA Distribution -->
           <div class="grid md:grid-cols-2 gap-6">
             <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
               <h3 class="font-bold mb-4">📈 Score Distribution</h3>
               <div id="score-distribution"></div>
+            </div>
+            <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+              <h3 class="font-bold mb-4">🧲 MA Cores Distribution</h3>
+              <div id="ma-distribution"></div>
+            </div>
+          </div>
+
+          <!-- Weight by EM/DM/Cash + Diversification Map -->
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+              <h3 class="font-bold mb-4">🌍 Weight by EM / DM / Cash</h3>
+              <div id="em-dm-cash-breakdown"></div>
             </div>
             <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
               <h3 class="font-bold mb-4">🗺️ Diversification Map</h3>
@@ -18502,9 +18516,9 @@
       if (!etf) return { text: 'Unknown', color: 'text-slate-500', icon: '❓' };
       if (etf.score >= 65 && etf.maStatus === 3) return { text: 'Strong Hold', color: 'text-emerald-400', icon: '✅' };
       if (etf.score >= 50 && etf.maStatus >= 2) return { text: 'Hold', color: 'text-indigo-400', icon: '👍' };
-      if (etf.score >= 35 && etf.maStatus >= 1) return { text: 'Watch', color: 'text-amber-400', icon: '👀' };
-      if (etf.maStatus === 0) return { text: 'Trim', color: 'text-red-400', icon: '✂️' };
-      if (etf.score < 35) return { text: 'Trim', color: 'text-red-400', icon: '✂️' };
+      if (etf.maStatus <= 1 && etf.maStatus > 0) return { text: 'Sell', color: 'text-red-400', icon: '🔴' };
+      if (etf.maStatus === 0) return { text: 'Sell', color: 'text-red-400', icon: '🔴' };
+      if (etf.score < 35) return { text: 'Sell', color: 'text-red-400', icon: '🔴' };
       return { text: 'Watch', color: 'text-amber-400', icon: '👀' };
     }
 
@@ -18633,6 +18647,111 @@
         <div class="mt-3 text-xs text-slate-500">Weight of portfolio allocated to each score bucket</div>
       `;
 
+      // === MA Cores Distribution ===
+      const maTiers = [
+        { label: '3/3', status: 3, color: 'bg-emerald-500', textColor: 'text-emerald-400' },
+        { label: '2/3', status: 2, color: 'bg-yellow-500', textColor: 'text-yellow-400' },
+        { label: '1/3', status: 1, color: 'bg-orange-500', textColor: 'text-orange-400' },
+        { label: '0/3', status: 0, color: 'bg-red-500', textColor: 'text-red-400' }
+      ];
+
+      const maxMaWeight = Math.max(...maTiers.map(t => {
+        return matched.filter(h => h.etf.maStatus === t.status).reduce((s, h) => s + h.weight, 0);
+      }), 1);
+
+      const sellWeight = matched.filter(h => h.etf.maStatus <= 1).reduce((s, h) => s + h.weight, 0);
+
+      function renderMaTierBar(t) {
+        const tierHoldings = matched.filter(h => h.etf.maStatus === t.status);
+        const tierWeight = tierHoldings.reduce((s, h) => s + h.weight, 0);
+        const barWidth = maxMaWeight > 0 ? (tierWeight / maxMaWeight * 100) : 0;
+        const tickers = tierHoldings.map(h => h.ticker).join(', ');
+        const sellTag = (t.status <= 1 && tierWeight > 0) ? ' [SELL]' : '';
+        let barContent = '';
+        if (tierWeight > 0) {
+          barContent = '<span class="absolute inset-0 flex items-center px-2 text-xs mono text-white font-bold">' + tierWeight.toFixed(0) + '% — ' + tickers + sellTag + '</span>';
+        }
+        return '<div class="flex items-center gap-3">' +
+          '<span class="text-xs ' + t.textColor + ' w-14 text-right mono">' + t.label + '</span>' +
+          '<div class="flex-1 bg-slate-800 rounded-full h-5 overflow-hidden relative">' +
+            '<div class="' + t.color + ' h-full rounded-full transition-all" style="width:' + barWidth + '%"></div>' +
+            barContent +
+          '</div>' +
+        '</div>';
+      }
+
+      let maDistHtml = '<div class="space-y-2">' + maTiers.map(renderMaTierBar).join('') + '</div>';
+      if (sellWeight > 0) {
+        maDistHtml += '<div class="mt-3 p-2 bg-red-900/30 border border-red-700/40 rounded-lg text-xs text-red-300">' +
+          '🔴 <strong>' + sellWeight.toFixed(0) + '% of portfolio</strong> is in MA ≤1/3 positions — these should be <strong>SOLD</strong>. Holdings with only 1 or 0 MAs intact lack trend support.' +
+        '</div>';
+      } else {
+        maDistHtml += '<div class="mt-3 text-xs text-emerald-400">All holdings have adequate MA support (≥2/3).</div>';
+      }
+      maDistHtml += '<div class="mt-2 text-xs text-slate-500">Weight of portfolio by MA status (above 30/60/200-day MAs)</div>';
+      document.getElementById('ma-distribution').innerHTML = maDistHtml;
+
+      // === EM / DM / Cash Breakdown ===
+      function classifyAsset(etf) {
+        if (!etf) return 'Other';
+        var c = etf.country || '';
+        var regions = etf.regions || [];
+        var sector = etf.sector || '';
+        if (c === 'Cash' || sector === 'Cash') return 'Cash';
+        if (regions.includes('Emerging Markets') || c === 'Emerging Markets') return 'EM';
+        if (regions.includes('Developed Markets') || c === 'Developed Markets') return 'DM';
+        if (regions.includes('US') || c === 'US') return 'DM';
+        if (regions.includes('Commodities') || c === 'Commodities') return 'Commodities';
+        return 'Other';
+      }
+
+      const assetClasses = { EM: 0, DM: 0, Cash: 0, Commodities: 0, Other: 0 };
+      const assetHoldingsMap = { EM: [], DM: [], Cash: [], Commodities: [], Other: [] };
+      matched.forEach(function(h) {
+        var cls = classifyAsset(h.etf);
+        assetClasses[cls] += h.weight;
+        assetHoldingsMap[cls].push(h.ticker);
+      });
+      var unmatchedWt = holdings.filter(function(h) { return !h.etf; }).reduce(function(s, h) { return s + h.weight; }, 0);
+      assetClasses['Other'] += unmatchedWt;
+
+      const assetColors = { EM: 'cyan', DM: 'indigo', Cash: 'slate', Commodities: 'amber', Other: 'purple' };
+      const assetLabels = { EM: 'Emerging Markets', DM: 'Developed Markets', Cash: 'Cash / Bonds', Commodities: 'Commodities', Other: 'Other' };
+
+      var concWarnings = [];
+      Object.entries(assetClasses).forEach(function(entry) {
+        if (entry[1] > 40 && entry[0] !== 'Cash') concWarnings.push('High ' + assetLabels[entry[0]] + ' concentration: ' + entry[1].toFixed(0) + '% (>40%)');
+      });
+
+      var emDmHtml = '<div class="space-y-3">';
+      ['EM', 'DM', 'Cash', 'Commodities', 'Other'].forEach(function(cls) {
+        if (assetClasses[cls] <= 0) return;
+        var pct = assetClasses[cls];
+        var tks = assetHoldingsMap[cls].join(', ');
+        var col = assetColors[cls];
+        emDmHtml += '<div>' +
+          '<div class="flex justify-between text-xs mb-1">' +
+            '<span class="text-' + col + '-400 font-bold">' + assetLabels[cls] + '</span>' +
+            '<span class="mono text-' + col + '-400">' + pct.toFixed(1) + '%</span>' +
+          '</div>' +
+          '<div class="bg-slate-800 rounded-full h-5 overflow-hidden relative">' +
+            '<div class="bg-' + col + '-500 h-full rounded-full transition-all" style="width:' + Math.min(pct, 100) + '%"></div>' +
+            (tks ? '<span class="absolute inset-0 flex items-center px-2 text-xs mono text-white">' + tks + '</span>' : '') +
+          '</div>' +
+        '</div>';
+      });
+      emDmHtml += '</div>';
+      if (concWarnings.length > 0) {
+        emDmHtml += '<div class="mt-3 space-y-1">';
+        concWarnings.forEach(function(w) {
+          emDmHtml += '<div class="text-xs text-red-400 bg-red-900/20 border border-red-700/30 rounded px-2 py-1">⚠️ ' + w + '</div>';
+        });
+        emDmHtml += '</div>';
+      } else {
+        emDmHtml += '<div class="mt-3 text-xs text-emerald-400">No excessive concentration detected.</div>';
+      }
+      document.getElementById('em-dm-cash-breakdown').innerHTML = emDmHtml;
+
       // === Diversification Map ===
       const byCountry = {};
       const bySector = {};
@@ -18659,6 +18778,8 @@
         </div>
         ${countryItems.length <= 2 ? '<div class="mt-3 text-xs text-amber-400">⚠️ Low geographic diversification — consider adding international exposure</div>' : ''}
         ${sectorItems.length <= 2 ? '<div class="mt-2 text-xs text-amber-400">⚠️ Low sector diversification — concentrated sector risk</div>' : ''}
+        ${countryItems.filter(([c, w]) => w > 30).map(([c, w]) => `<div class="mt-1 text-xs text-red-400">⚠️ High concentration in ${c}: ${w.toFixed(0)}% — consider reducing</div>`).join('')}
+        ${sectorItems.filter(([s, w]) => w > 30).map(([s, w]) => `<div class="mt-1 text-xs text-red-400">⚠️ High concentration in ${s}: ${w.toFixed(0)}% — consider diversifying</div>`).join('')}
       `;
 
       // === Trim Suggestions ===
@@ -18867,6 +18988,37 @@
 
       // Show results
       document.getElementById('analyzer-results').classList.remove('hidden');
+    }
+
+    function loadCSVFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result.trim();
+        const lines = text.split(/\r?\n/);
+        clearMyPortfolio();
+        let startIdx = 0;
+        // Skip header row if it looks like a header
+        const firstLine = lines[0].toLowerCase();
+        if (firstLine.includes('ticker') || firstLine.includes('symbol') || firstLine.includes('weight')) {
+          startIdx = 1;
+        }
+        for (let i = startIdx; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          const parts = line.split(/[,;\t]+/);
+          const ticker = (parts[0] || '').trim().toUpperCase();
+          const weight = parseFloat((parts[1] || '').trim()) || 0;
+          if (ticker && weight > 0) {
+            addPortfolioRow(ticker, weight);
+          }
+        }
+        updateTotalWeight();
+      };
+      reader.readAsText(file);
+      // Reset input so same file can be re-loaded
+      event.target.value = '';
     }
 
     // Initialize with a few empty rows
