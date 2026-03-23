@@ -25,6 +25,7 @@
     <div class="flex gap-2 mb-6 flex-wrap" id="tabs">
       <button onclick="showTab('signals')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-indigo-600 text-white" data-tab="signals">📡 Screener</button>
       <button onclick="showTab('portfolio')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="portfolio">💼 Portfolio</button>
+      <button onclick="showTab('analyzer')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="analyzer">📊 Portfolio Analyzer</button>
       <button onclick="showTab('cio')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="cio">🏛️ CIO Signals</button>
       <button onclick="showTab('strategy')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="strategy">🎯 Strategy</button>
       <button onclick="showTab('rules')" class="tab-btn px-4 py-2 rounded-lg font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-tab="rules">⚙️ Settings</button>
@@ -315,6 +316,63 @@
           <div class="flex flex-wrap gap-2 mt-2" id="excluded-list">
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ===================== PORTFOLIO ANALYZER TAB ===================== -->
+    <div id="tab-analyzer" class="tab-content hidden">
+      <div class="space-y-6">
+
+        <!-- CSV Upload Zone -->
+        <div id="analyzer-dropzone" class="border-2 border-dashed border-slate-600 rounded-xl p-10 text-center hover:border-indigo-500 transition-colors cursor-pointer"
+             onclick="document.getElementById('analyzer-file-input').click()"
+             ondragover="event.preventDefault(); this.classList.add('border-indigo-500','bg-indigo-500/5');"
+             ondragleave="this.classList.remove('border-indigo-500','bg-indigo-500/5');"
+             ondrop="event.preventDefault(); this.classList.remove('border-indigo-500','bg-indigo-500/5'); handleAnalyzerFile(event.dataTransfer.files[0]);">
+          <div class="text-4xl mb-3">📂</div>
+          <div class="text-slate-300 font-medium mb-1">Drop portfolio CSV · columns: Symbol, Shares, Cost Basis</div>
+          <div class="text-slate-500 text-sm mb-4">CSV will be parsed client-side — nothing leaves your browser</div>
+          <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors" onclick="event.stopPropagation(); document.getElementById('analyzer-file-input').click();">Choose File</button>
+          <input type="file" id="analyzer-file-input" accept=".csv" class="hidden" onchange="handleAnalyzerFile(this.files[0]);" />
+        </div>
+
+        <!-- Unrecognized symbols banner (hidden by default) -->
+        <div id="analyzer-unrecognized" class="hidden bg-amber-900/30 border border-amber-600/50 rounded-xl p-4 text-amber-300">
+          <span class="font-bold">⚠ Unrecognized symbols:</span>
+          <span id="analyzer-unrecognized-list"></span>
+        </div>
+
+        <!-- Analyzer results (hidden by default) -->
+        <div id="analyzer-results" class="hidden space-y-6">
+
+          <!-- Summary stats -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="analyzer-summary"></div>
+
+          <!-- Holdings table -->
+          <div class="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase">
+                    <th class="text-left p-3">Symbol</th>
+                    <th class="text-left p-3">Name</th>
+                    <th class="text-right p-3">Shares</th>
+                    <th class="text-right p-3">Cost Basis</th>
+                    <th class="text-right p-3">Price</th>
+                    <th class="text-right p-3">Mkt Value</th>
+                    <th class="text-right p-3">P&L</th>
+                    <th class="text-right p-3">P&L %</th>
+                    <th class="text-right p-3">Weight</th>
+                    <th class="text-right p-3">Score</th>
+                    <th class="text-right p-3">6M Ret</th>
+                  </tr>
+                </thead>
+                <tbody id="analyzer-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -17715,6 +17773,115 @@
         const activeKey = activeCioTab ? activeCioTab.dataset.cioTab : 'overview';
         renderCioSubTab(activeKey);
       }
+    }
+
+    // ===================== PORTFOLIO ANALYZER =====================
+    function handleAnalyzerFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        parseAnalyzerCSV(e.target.result);
+      };
+      reader.readAsText(file);
+    }
+
+    function parseAnalyzerCSV(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) return;
+
+      // Parse header — find columns case-insensitively
+      const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+      const symIdx = header.findIndex(h => h === 'symbol' || h === 'ticker' || h === 'sym');
+      const sharesIdx = header.findIndex(h => h === 'shares' || h === 'quantity' || h === 'qty');
+      const costIdx = header.findIndex(h => h.includes('cost') || h.includes('basis') || h === 'avgcost');
+
+      if (symIdx === -1) {
+        alert('CSV must contain a "Symbol" column');
+        return;
+      }
+
+      // Build ticker lookup map (case-insensitive)
+      const tickerMap = {};
+      etfUniverse.forEach(inst => { tickerMap[inst.ticker.toUpperCase()] = inst; });
+
+      const holdings = [];
+      const unrecognized = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim());
+        if (!cols[symIdx]) continue;
+        const sym = cols[symIdx].toUpperCase();
+        const shares = sharesIdx !== -1 ? parseFloat(cols[sharesIdx]) || 0 : 0;
+        const costBasis = costIdx !== -1 ? parseFloat(cols[costIdx]) || 0 : 0;
+        const instrument = tickerMap[sym];
+        if (!instrument) {
+          unrecognized.push(sym);
+          continue;
+        }
+        holdings.push({ symbol: sym, shares, costBasis, instrument });
+      }
+
+      renderAnalyzer(holdings, unrecognized);
+    }
+
+    function renderAnalyzer(holdings, unrecognized) {
+      // Show/hide unrecognized banner
+      const banner = document.getElementById('analyzer-unrecognized');
+      if (unrecognized.length > 0) {
+        banner.classList.remove('hidden');
+        document.getElementById('analyzer-unrecognized-list').textContent = ' ' + unrecognized.join(', ');
+      } else {
+        banner.classList.add('hidden');
+      }
+
+      // Calculate scores for instruments
+      holdings.forEach(h => {
+        h.score = calculateScore(h.instrument);
+        h.mktValue = h.shares * h.instrument.price;
+        h.pnl = h.shares * (h.instrument.price - h.costBasis);
+        h.pnlPct = h.costBasis > 0 ? ((h.instrument.price - h.costBasis) / h.costBasis * 100) : 0;
+      });
+
+      const totalValue = holdings.reduce((s, h) => s + h.mktValue, 0);
+      const totalCost = holdings.reduce((s, h) => s + h.shares * h.costBasis, 0);
+      const totalPnL = holdings.reduce((s, h) => s + h.pnl, 0);
+      const totalPnLPct = totalCost > 0 ? (totalPnL / totalCost * 100) : 0;
+      const avgScore = holdings.length > 0 ? holdings.reduce((s, h) => s + h.score, 0) / holdings.length : 0;
+
+      // Summary cards
+      document.getElementById('analyzer-summary').innerHTML = [
+        { label: 'Holdings', value: holdings.length, color: 'indigo' },
+        { label: 'Market Value', value: '$' + totalValue.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0}), color: 'cyan' },
+        { label: 'Total P&L', value: (totalPnL >= 0 ? '+' : '') + '$' + totalPnL.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0}) + ' (' + totalPnLPct.toFixed(1) + '%)', color: totalPnL >= 0 ? 'emerald' : 'red' },
+        { label: 'Avg Score', value: avgScore.toFixed(1), color: avgScore >= 60 ? 'emerald' : avgScore >= 40 ? 'amber' : 'red' },
+      ].map(c => `<div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+        <div class="text-xs text-slate-400 uppercase mb-1">${c.label}</div>
+        <div class="text-xl font-bold text-${c.color}-400 mono">${c.value}</div>
+      </div>`).join('');
+
+      // Holdings table
+      holdings.sort((a, b) => b.mktValue - a.mktValue);
+      document.getElementById('analyzer-table').innerHTML = holdings.map(h => {
+        const weight = totalValue > 0 ? (h.mktValue / totalValue * 100) : 0;
+        const pnlColor = h.pnl >= 0 ? 'text-emerald-400' : 'text-red-400';
+        const scoreColor = h.score >= 60 ? 'text-emerald-400' : h.score >= 40 ? 'text-amber-400' : 'text-red-400';
+        const retColor = h.instrument.return6m >= 0 ? 'text-emerald-400' : 'text-red-400';
+        return `<tr class="border-b border-slate-800 hover:bg-slate-800/50">
+          <td class="p-3 font-medium text-white mono">${h.symbol}</td>
+          <td class="p-3 text-slate-300 truncate max-w-[200px]">${h.instrument.name}</td>
+          <td class="p-3 text-right mono text-slate-300">${h.shares.toLocaleString()}</td>
+          <td class="p-3 text-right mono text-slate-300">$${h.costBasis.toFixed(2)}</td>
+          <td class="p-3 text-right mono text-slate-300">$${h.instrument.price.toFixed(2)}</td>
+          <td class="p-3 text-right mono text-slate-300">$${h.mktValue.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</td>
+          <td class="p-3 text-right mono ${pnlColor}">${h.pnl >= 0 ? '+' : ''}$${h.pnl.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</td>
+          <td class="p-3 text-right mono ${pnlColor}">${h.pnlPct >= 0 ? '+' : ''}${h.pnlPct.toFixed(1)}%</td>
+          <td class="p-3 text-right mono text-slate-300">${weight.toFixed(1)}%</td>
+          <td class="p-3 text-right mono ${scoreColor}">${h.score.toFixed(0)}</td>
+          <td class="p-3 text-right mono ${retColor}">${h.instrument.return6m >= 0 ? '+' : ''}${h.instrument.return6m.toFixed(1)}%</td>
+        </tr>`;
+      }).join('');
+
+      document.getElementById('analyzer-results').classList.remove('hidden');
     }
 
     // Render screener
