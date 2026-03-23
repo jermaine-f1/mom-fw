@@ -414,6 +414,54 @@
               Red = MA=0 (exit) · Amber = MA=1 (watch) · Sorted MA desc then Score desc
             </div>
           </div>
+
+          <!-- Sell/Reduce + Buy Candidates (side by side) -->
+          <div class="grid md:grid-cols-2 gap-4">
+
+            <!-- Sell / Reduce panel -->
+            <div class="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
+              <div class="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
+                <span class="text-red-400 font-bold text-sm uppercase tracking-wide">Sell / Reduce</span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase">
+                      <th class="text-left p-2.5">Symbol</th>
+                      <th class="text-center p-2.5">MA</th>
+                      <th class="text-right p-2.5">Score</th>
+                      <th class="text-left p-2.5">Reason</th>
+                      <th class="text-center p-2.5">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analyzer-sell-table"></tbody>
+                </table>
+              </div>
+              <div id="analyzer-sell-empty" class="hidden px-4 py-6 text-center text-slate-500 text-sm">No sell or reduce signals</div>
+            </div>
+
+            <!-- Buy Candidates panel -->
+            <div class="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
+              <div class="px-4 py-3 border-b border-slate-800 flex items-center gap-2">
+                <span class="text-emerald-400 font-bold text-sm uppercase tracking-wide">Buy Candidates</span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase">
+                      <th class="text-left p-2.5">Symbol</th>
+                      <th class="text-center p-2.5">MA</th>
+                      <th class="text-right p-2.5">Score</th>
+                      <th class="text-left p-2.5">Why Buy</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analyzer-buy-table"></tbody>
+                </table>
+              </div>
+              <div id="analyzer-buy-empty" class="hidden px-4 py-6 text-center text-slate-500 text-sm">No buy candidates found</div>
+            </div>
+
+          </div>
         </div>
 
       </div>
@@ -17978,7 +18026,129 @@
         </tr>`;
       }).join('');
 
+      // Sell/Reduce + Buy Candidates
+      renderAnalyzerActions(holdings, totalValue);
+
       document.getElementById('analyzer-results').classList.remove('hidden');
+    }
+
+    // CIO Max% per asset class (country/region). Anything not listed defaults to 25%.
+    const CIO_MAX_PCT = {
+      'US': 40, 'Commodities': 20, 'India': 15,
+      'Emerging Markets': 20, 'Developed Markets': 30,
+      'Japan': 15, 'China': 15, 'Brazil': 10, 'Taiwan': 10,
+    };
+    const CIO_DEFAULT_MAX_PCT = 25;
+
+    function getAssetClassMaxPct(country) {
+      return CIO_MAX_PCT[country] || CIO_DEFAULT_MAX_PCT;
+    }
+
+    function renderAnalyzerActions(holdings, totalValue) {
+      // Build weight-by-country map from holdings
+      const countryWts = {};
+      holdings.forEach(h => {
+        const c = h.instrument.country || 'Unknown';
+        countryWts[c] = (countryWts[c] || 0) + h.mktValue;
+      });
+
+      // --- Sell / Reduce ---
+      const sellRows = [];
+      holdings.forEach(h => {
+        const ma = h.maStatus;
+        const countryPct = totalValue > 0 ? (countryWts[h.instrument.country || 'Unknown'] / totalValue * 100) : 0;
+        const maxPct = getAssetClassMaxPct(h.instrument.country || 'Unknown');
+        const reasons = [];
+        let action = null;
+
+        if (ma === 0) {
+          reasons.push('MA=0/3 — all MAs broken');
+          action = 'Exit';
+        } else if (ma === 1 && h.score < 50) {
+          reasons.push('MA=1/3 + Score < 50');
+          action = 'Exit';
+        } else if (ma === 1 && h.score >= 50) {
+          reasons.push('MA=1/3 + Score \u2265 50');
+          action = 'Reduce';
+        }
+
+        if (countryPct > maxPct) {
+          reasons.push(`${h.instrument.country} at ${countryPct.toFixed(0)}% > ${maxPct}% max`);
+          if (!action) action = 'Reduce';
+        }
+
+        if (action) {
+          sellRows.push({ symbol: h.symbol, ma, score: h.score, reason: reasons.join('; '), action });
+        }
+      });
+
+      const sellTable = document.getElementById('analyzer-sell-table');
+      const sellEmpty = document.getElementById('analyzer-sell-empty');
+      if (sellRows.length === 0) {
+        sellTable.innerHTML = '';
+        sellEmpty.classList.remove('hidden');
+      } else {
+        sellEmpty.classList.add('hidden');
+        const maPill = (ma) => {
+          const colors = { 0: 'bg-red-900/60 text-red-300', 1: 'bg-amber-900/60 text-amber-300', 2: 'bg-emerald-800/60 text-emerald-400', 3: 'bg-emerald-900 text-emerald-300' };
+          return `<span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${colors[ma]}">${ma}/3</span>`;
+        };
+        sellTable.innerHTML = sellRows.map(r => {
+          const scoreColor = r.score >= 60 ? 'text-emerald-400' : r.score >= 40 ? 'text-amber-400' : 'text-red-400';
+          const actionBadge = r.action === 'Exit'
+            ? '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-red-900/60 text-red-300">Exit</span>'
+            : '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-900/60 text-amber-300">Reduce</span>';
+          return `<tr class="border-b border-slate-800">
+            <td class="p-2.5 font-medium text-white mono">${r.symbol}</td>
+            <td class="p-2.5 text-center">${maPill(r.ma)}</td>
+            <td class="p-2.5 text-right mono ${scoreColor}">${r.score.toFixed(0)}</td>
+            <td class="p-2.5 text-xs text-slate-400">${r.reason}</td>
+            <td class="p-2.5 text-center">${actionBadge}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      // --- Buy Candidates ---
+      const heldTickers = new Set(holdings.map(h => h.symbol));
+      const buyCandidates = rankedETFs.filter(e => {
+        if (!e.isETF || heldTickers.has(e.ticker)) return false;
+        const ma = (e.aboveMA30 ? 1 : 0) + (e.aboveMA60 ? 1 : 0) + (e.aboveMA200 ? 1 : 0);
+        if (ma < 2 || e.score < 65) return false;
+        // Asset class must be below CIO max
+        const c = e.country || 'Unknown';
+        const currentPct = totalValue > 0 ? ((countryWts[c] || 0) / totalValue * 100) : 0;
+        const maxPct = getAssetClassMaxPct(c);
+        return currentPct < maxPct;
+      });
+
+      const buyTable = document.getElementById('analyzer-buy-table');
+      const buyEmpty = document.getElementById('analyzer-buy-empty');
+      if (buyCandidates.length === 0) {
+        buyTable.innerHTML = '';
+        buyEmpty.classList.remove('hidden');
+      } else {
+        buyEmpty.classList.add('hidden');
+        buyTable.innerHTML = buyCandidates.slice(0, 15).map(e => {
+          const ma = (e.aboveMA30 ? 1 : 0) + (e.aboveMA60 ? 1 : 0) + (e.aboveMA200 ? 1 : 0);
+          const maPillColors = { 3: 'bg-emerald-900 text-emerald-300', 2: 'bg-emerald-800/60 text-emerald-400' };
+          const scoreColor = e.score >= 60 ? 'text-emerald-400' : 'text-amber-400';
+          const c = e.country || 'Unknown';
+          const currentPct = totalValue > 0 ? ((countryWts[c] || 0) / totalValue * 100) : 0;
+          const maxPct = getAssetClassMaxPct(c);
+          const headroom = (maxPct - currentPct).toFixed(0);
+          const whyParts = [];
+          whyParts.push(`Score ${e.score.toFixed(0)}`);
+          whyParts.push(`MA=${ma}/3`);
+          whyParts.push(`${c} has ${headroom}% headroom`);
+          if (e.return6m > 10) whyParts.push(`+${e.return6m.toFixed(0)}% 6M`);
+          return `<tr class="border-b border-slate-800">
+            <td class="p-2.5 font-medium text-white mono">${e.ticker}</td>
+            <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${maPillColors[ma]}">${ma}/3</span></td>
+            <td class="p-2.5 text-right mono ${scoreColor}">${e.score.toFixed(0)}</td>
+            <td class="p-2.5 text-xs text-slate-400">${whyParts.join(' · ')}</td>
+          </tr>`;
+        }).join('');
+      }
     }
 
     function renderAnalyzerDistribution(holdings, totalValue) {
