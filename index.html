@@ -527,6 +527,10 @@
             </div>
 
           </div>
+
+          <!-- Risk Manager's Strategy Audit -->
+          <div id="analyzer-strategy-audit" class="bg-slate-900/50 rounded-xl border border-slate-800 p-5 space-y-4 hidden"></div>
+
         </div>
 
       </div>
@@ -19116,6 +19120,9 @@
       // Sell/Reduce + Buy Candidates
       renderAnalyzerActions(holdings, totalValue);
 
+      // Risk Manager's Strategy Audit
+      renderStrategyAudit(holdings, totalValue);
+
       showAnalyzerLoading(false);
       document.getElementById('analyzer-results').classList.remove('hidden');
       document.getElementById('analyzer-save-bar').classList.remove('hidden');
@@ -19242,6 +19249,113 @@
           </tr>`;
         }).join('');
       }
+    }
+
+    function renderStrategyAudit(holdings, totalValue) {
+      const container = document.getElementById('analyzer-strategy-audit');
+      if (!holdings || holdings.length === 0) { container.classList.add('hidden'); return; }
+      container.classList.remove('hidden');
+
+      // ── Pillar 1: Momentum + Diversification ──
+      const p1Checks = [];
+      const avgScore = holdings.reduce((s, h) => s + h.score, 0) / holdings.length;
+      p1Checks.push({ pass: avgScore >= 60, text: `Quality momentum avg score: ${avgScore.toFixed(1)} (${avgScore >= 60 ? 'good' : 'weak'})` });
+
+      const tickers = holdings.map(h => h.symbol);
+      let corrSum = 0, corrCount = 0, highCorrPairs = 0;
+      for (let i = 0; i < tickers.length; i++) {
+        for (let j = i + 1; j < tickers.length; j++) {
+          const c = getCorrelation(tickers[i], tickers[j]);
+          corrSum += c; corrCount++;
+          if (c > 0.70) highCorrPairs++;
+        }
+      }
+      const avgCorr = corrCount > 0 ? corrSum / corrCount : 0;
+      p1Checks.push({ pass: avgCorr < 0.60, text: `Avg pairwise correlation: ${avgCorr.toFixed(2)} (${avgCorr < 0.60 ? 'well diversified' : 'concentrated'})` });
+
+      const countries = new Set(holdings.map(h => h.instrument.country || 'Unknown'));
+      p1Checks.push({ pass: countries.size >= 3, text: `${countries.size} ${countries.size === 1 ? 'country' : 'countries'} (${countries.size >= 3 ? 'diversified' : 'concentrated'})` });
+
+      const sectors = new Set(holdings.map(h => h.instrument.sector || 'Unknown'));
+      p1Checks.push({ pass: sectors.size >= 3, text: `${sectors.size} ${sectors.size === 1 ? 'sector' : 'sectors'} (${sectors.size >= 3 ? 'diversified' : 'concentrated'})` });
+
+      p1Checks.push({ pass: highCorrPairs === 0, text: highCorrPairs === 0 ? 'No highly correlated pairs (>0.70)' : `${highCorrPairs} highly correlated pair${highCorrPairs > 1 ? 's' : ''} (>0.70)` });
+
+      // ── Pillar 2: Many Small Bets ──
+      const p2Checks = [];
+      const weights = holdings.map(h => totalValue > 0 ? (h.mktValue / totalValue * 100) : 0);
+      const maxWt = Math.max(...weights);
+      p2Checks.push({ pass: maxWt <= 15, text: `Max weight: ${maxWt.toFixed(0)}% (${maxWt <= 15 ? 'well spread' : 'over 15% — too concentrated'})` });
+
+      p2Checks.push({ pass: holdings.length >= 6, text: `${holdings.length} positions (${holdings.length >= 6 ? 'adequate' : 'below 6 — add more'})` });
+
+      const minWt = Math.min(...weights);
+      const spreadRatio = maxWt > 0 ? minWt / maxWt : 0;
+      const isEven = spreadRatio >= 0.4;
+      p2Checks.push({ pass: isEven, text: `Weight spread: ${isEven ? 'Reasonably balanced' : 'Uneven — consider rebalancing'}` });
+
+      // ── Pillar 3: Quality Over Raw Return ──
+      const p3Checks = [];
+      const avgSortino = holdings.reduce((s, h) => s + (h.instrument.sortino || 0), 0) / holdings.length;
+      p3Checks.push({ pass: avgSortino >= 1.5, text: `Avg Sortino: ${avgSortino.toFixed(2)} (${avgSortino >= 1.5 ? 'quality trend' : 'below quality threshold'})` });
+
+      const avgWeeksDown = holdings.reduce((s, h) => s + (h.instrument.weeksDown || 0), 0) / holdings.length;
+      p3Checks.push({ pass: avgWeeksDown <= 3, text: `Avg weeks down: ${avgWeeksDown.toFixed(1)}/12 (${avgWeeksDown <= 3 ? 'healthy' : 'deteriorating'})` });
+
+      const parabolicCount = holdings.filter(h => (h.instrument.zScore || 0) > 2.5).length;
+      p3Checks.push({ pass: parabolicCount === 0, text: parabolicCount === 0 ? 'No parabolic holdings' : `${parabolicCount} parabolic holding${parabolicCount > 1 ? 's' : ''} (z-score > 2.5)` });
+
+      const choppyCount = holdings.filter(h => (h.instrument.sortino || 0) < 0.5 && h.score < 40).length;
+      p3Checks.push({ pass: choppyCount === 0, text: choppyCount === 0 ? 'No choppy, low-quality trends' : `${choppyCount} choppy, low-quality trend${choppyCount > 1 ? 's' : ''}` });
+
+      // ── Pillar 4: Flexible Screening ──
+      const p4Checks = [];
+      const ma3Count = holdings.filter(h => h.instrument.aboveMA30 && h.instrument.aboveMA60 && h.instrument.aboveMA200).length;
+      const ma3Pct = ma3Count / holdings.length;
+      p4Checks.push({ pass: ma3Pct >= 0.5, text: `${ma3Count}/${holdings.length} holdings with MA 3/3 (${ma3Pct >= 0.5 ? 'strong trend support' : 'under half — trend support weakening'})` });
+
+      const heldTickers = new Set(holdings.map(h => h.symbol));
+      const allInUniverse = holdings.every(h => heldTickers.has(h.symbol) && h.instrument && h.instrument.ticker);
+      p4Checks.push({ pass: allInUniverse, text: allInUniverse ? 'All tickers in screener universe' : 'Some tickers outside screener universe' });
+
+      const ma0Count = holdings.filter(h => !h.instrument.aboveMA30 && !h.instrument.aboveMA60 && !h.instrument.aboveMA200).length;
+      p4Checks.push({ pass: ma0Count === 0, text: ma0Count === 0 ? 'No immediate trim signals' : `${ma0Count} holding${ma0Count > 1 ? 's' : ''} with MA 0/3 — trim` });
+
+      // ── Render ──
+      const pillars = [
+        { title: '1. Momentum + Diversification', checks: p1Checks, color: 'cyan' },
+        { title: '2. Many Small Bets', checks: p2Checks, color: 'yellow' },
+        { title: '3. Quality Over Raw Return', checks: p3Checks, color: 'emerald' },
+        { title: '4. Flexible Screening', checks: p4Checks, color: 'purple' },
+      ];
+
+      let html = `<div class="flex items-center gap-2 mb-2">
+        <span class="text-lg">📋</span>
+        <span class="text-lg font-bold text-white">Risk Manager's Strategy Audit</span>
+      </div>`;
+
+      html += '<div class="grid md:grid-cols-2 gap-4">';
+      pillars.forEach(p => {
+        const passed = p.checks.filter(c => c.pass).length;
+        const total = p.checks.length;
+        const scoreColor = passed === total ? 'text-emerald-400' : passed >= total / 2 ? 'text-yellow-400' : 'text-red-400';
+        html += `<div class="bg-slate-950/60 rounded-xl border border-slate-700/60 p-4">
+          <div class="flex justify-between items-center mb-3">
+            <span class="font-bold text-${p.color}-400">${p.title}</span>
+            <span class="font-bold ${scoreColor} mono">${passed}/${total}</span>
+          </div>
+          <div class="space-y-1.5">`;
+        p.checks.forEach(c => {
+          const icon = c.pass
+            ? '<span class="text-emerald-400 mr-2">✓</span>'
+            : '<span class="text-red-400 mr-2">✗</span>';
+          html += `<div class="text-sm text-slate-300">${icon}${c.text}</div>`;
+        });
+        html += '</div></div>';
+      });
+      html += '</div>';
+
+      container.innerHTML = html;
     }
 
     function renderScoreBuckets(holdings, totalValue) {
