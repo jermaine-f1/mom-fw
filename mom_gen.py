@@ -578,6 +578,18 @@ def generate_html(etf_data, correlations, generation_date):
           <input type="file" id="analyzer-file-input" accept=".csv" class="hidden" onchange="handleAnalyzerFile(this.files[0]);" />
         </div>
 
+        <!-- Processing state -->
+        <div id="analyzer-loading" class="hidden border-2 border-indigo-500/30 rounded-xl p-10 text-center bg-indigo-500/5">
+          <div class="inline-block mb-4">
+            <svg class="animate-spin h-10 w-10 text-indigo-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+          </div>
+          <div class="text-indigo-300 font-medium text-lg mb-1" id="analyzer-loading-title">Processing portfolio…</div>
+          <div class="text-slate-400 text-sm" id="analyzer-loading-detail">Parsing CSV</div>
+        </div>
+
         <!-- Unrecognized symbols banner (hidden by default) -->
         <div id="analyzer-unrecognized" class="hidden bg-amber-900/30 border border-amber-600/50 rounded-xl p-4 text-amber-300">
           <span class="font-bold">⚠ Unrecognized symbols:</span>
@@ -1651,11 +1663,21 @@ def generate_html(etf_data, correlations, generation_date):
 
     // ========== PORTFOLIO ANALYZER ==========
 
+    function showAnalyzerLoading(show, detail) {{
+      document.getElementById('analyzer-dropzone').classList.toggle('hidden', show);
+      document.getElementById('analyzer-loading').classList.toggle('hidden', !show);
+      if (detail) document.getElementById('analyzer-loading-detail').textContent = detail;
+    }}
+
     function handleAnalyzerFile(file) {{
       if (!file) return;
+      showAnalyzerLoading(true, 'Reading ' + file.name);
       const reader = new FileReader();
       reader.onload = function(e) {{
-        parseAnalyzerCSV(e.target.result);
+        // Defer to let the loading UI paint
+        requestAnimationFrame(() => {{
+          setTimeout(() => parseAnalyzerCSV(e.target.result), 50);
+        }});
       }};
       reader.readAsText(file);
     }}
@@ -1694,6 +1716,7 @@ def generate_html(etf_data, correlations, generation_date):
         holdings.push({{ symbol: sym, shares, costBasis, instrument }});
       }}
 
+      document.getElementById('analyzer-loading-detail').textContent = 'Scoring ' + holdings.length + ' holdings…';
       renderAnalyzer(holdings, unrecognized);
     }}
 
@@ -1808,6 +1831,7 @@ def generate_html(etf_data, correlations, generation_date):
       // Sell/Reduce + Buy Candidates
       renderAnalyzerActions(holdings, totalValue);
 
+      showAnalyzerLoading(false);
       document.getElementById('analyzer-results').classList.remove('hidden');
     }}
 
