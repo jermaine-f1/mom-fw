@@ -351,6 +351,44 @@
           <!-- Risk Strip -->
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="analyzer-risk-strip"></div>
 
+          <!-- Score Distribution Panel -->
+          <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-5 space-y-4">
+            <h3 class="font-bold text-slate-200 text-sm uppercase tracking-wide">Score Distribution</h3>
+
+            <!-- Bar 1 — MA Distribution (primary) -->
+            <div>
+              <div class="text-xs text-slate-400 mb-1">MA Signal Distribution</div>
+              <div class="flex w-full h-8 rounded-lg overflow-hidden" id="analyzer-ma-bar"></div>
+              <div class="flex gap-4 mt-1.5 text-xs text-slate-400" id="analyzer-ma-legend"></div>
+            </div>
+
+            <!-- Bar 2 — Score Bands (secondary) -->
+            <div>
+              <div class="text-xs text-slate-400 mb-1">Score Bands</div>
+              <div class="flex w-full h-5 rounded-lg overflow-hidden" id="analyzer-score-bar"></div>
+              <div class="flex gap-4 mt-1.5 text-xs text-slate-400" id="analyzer-score-legend"></div>
+            </div>
+
+            <!-- Region Breakdown Table -->
+            <div class="overflow-x-auto mt-2">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase">
+                    <th class="text-left p-2">Region</th>
+                    <th class="text-right p-2">Positions</th>
+                    <th class="text-right p-2">Wt%</th>
+                    <th class="text-right p-2">MA=3</th>
+                    <th class="text-right p-2">MA=2</th>
+                    <th class="text-right p-2">MA=1</th>
+                    <th class="text-right p-2">MA=0</th>
+                    <th class="text-right p-2">Avg Score</th>
+                  </tr>
+                </thead>
+                <tbody id="analyzer-region-table"></tbody>
+              </table>
+            </div>
+          </div>
+
           <!-- Holdings table -->
           <div class="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
             <div class="overflow-x-auto">
@@ -17900,6 +17938,9 @@
         <div class="text-2xl font-bold text-${c.color}-400 mono">${c.value}</div>
       </div>`).join('');
 
+      // Score Distribution Panel
+      renderAnalyzerDistribution(holdings, totalValue);
+
       // Holdings table
       holdings.sort((a, b) => b.mktValue - a.mktValue);
       document.getElementById('analyzer-table').innerHTML = holdings.map(h => {
@@ -17923,6 +17964,94 @@
       }).join('');
 
       document.getElementById('analyzer-results').classList.remove('hidden');
+    }
+
+    function renderAnalyzerDistribution(holdings, totalValue) {
+      // MA status per holding (0-3)
+      const maGroups = [0, 0, 0, 0]; // index = maStatus count
+      const maValues = [0, 0, 0, 0]; // market value per group
+      holdings.forEach(h => {
+        const ma = (h.instrument.aboveMA30 ? 1 : 0) + (h.instrument.aboveMA60 ? 1 : 0) + (h.instrument.aboveMA200 ? 1 : 0);
+        maGroups[ma]++;
+        maValues[ma] += h.mktValue;
+      });
+
+      const maColors = ['#7f1d1d', '#78350f', '#166534', '#065f46'];
+      const maLabels = ['MA\u20050', 'MA\u20051', 'MA\u20052', 'MA\u20053'];
+
+      // Render MA bar (segments ordered MA=3 → MA=0 left to right)
+      const maOrder = [3, 2, 1, 0];
+      let maBarHtml = '';
+      let maLegendHtml = '';
+      maOrder.forEach(i => {
+        const pct = totalValue > 0 ? (maValues[i] / totalValue * 100) : 0;
+        if (pct > 0) {
+          maBarHtml += `<div style="width:${pct}%;background:${maColors[i]}" class="flex items-center justify-center text-xs font-bold text-white/90 mono">${pct >= 8 ? pct.toFixed(0) + '%' : ''}</div>`;
+        }
+        if (maGroups[i] > 0) {
+          maLegendHtml += `<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background:${maColors[i]}"></span>${maLabels[i]} ${maGroups[i]} (${pct.toFixed(0)}%)</span>`;
+        }
+      });
+      document.getElementById('analyzer-ma-bar').innerHTML = maBarHtml;
+      document.getElementById('analyzer-ma-legend').innerHTML = maLegendHtml;
+
+      // Score bands bar
+      const scoreBands = [
+        { label: '\u226570', min: 70, max: Infinity, color: '#065f46', value: 0 },
+        { label: '50\u201369', min: 50, max: 70, color: '#78350f', value: 0 },
+        { label: '<50', min: -Infinity, max: 50, color: '#7f1d1d', value: 0 },
+      ];
+      holdings.forEach(h => {
+        for (const b of scoreBands) {
+          if (h.score >= b.min && h.score < b.max) { b.value += h.mktValue; break; }
+        }
+      });
+      let scoreBarHtml = '';
+      let scoreLegendHtml = '';
+      scoreBands.forEach(b => {
+        const pct = totalValue > 0 ? (b.value / totalValue * 100) : 0;
+        if (pct > 0) {
+          scoreBarHtml += `<div style="width:${pct}%;background:${b.color}" class="flex items-center justify-center text-xs font-bold text-white/90 mono">${pct >= 8 ? pct.toFixed(0) + '%' : ''}</div>`;
+        }
+        const cnt = holdings.filter(h => h.score >= b.min && h.score < b.max).length;
+        if (cnt > 0) {
+          scoreLegendHtml += `<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background:${b.color}"></span>${b.label} ${cnt} (${pct.toFixed(0)}%)</span>`;
+        }
+      });
+      document.getElementById('analyzer-score-bar').innerHTML = scoreBarHtml;
+      document.getElementById('analyzer-score-legend').innerHTML = scoreLegendHtml;
+
+      // Region breakdown table
+      const regionMap = {};
+      holdings.forEach(h => {
+        const region = h.instrument.country || 'Unknown';
+        if (!regionMap[region]) regionMap[region] = { positions: 0, value: 0, ma: [0,0,0,0], totalScore: 0 };
+        const r = regionMap[region];
+        r.positions++;
+        r.value += h.mktValue;
+        const ma = (h.instrument.aboveMA30 ? 1 : 0) + (h.instrument.aboveMA60 ? 1 : 0) + (h.instrument.aboveMA200 ? 1 : 0);
+        r.ma[ma]++;
+        r.totalScore += h.score;
+      });
+
+      const regions = Object.entries(regionMap).sort((a, b) => b[1].value - a[1].value);
+      document.getElementById('analyzer-region-table').innerHTML = regions.map(([name, r]) => {
+        const wtPct = totalValue > 0 ? (r.value / totalValue * 100) : 0;
+        const avgSc = r.positions > 0 ? r.totalScore / r.positions : 0;
+        const scoreColor = avgSc >= 60 ? 'text-emerald-400' : avgSc >= 40 ? 'text-amber-400' : 'text-red-400';
+        const isEM = /emerging|india/i.test(name);
+        const rowClass = isEM && r.ma[0] > 0 ? 'bg-red-900/20' : '';
+        return `<tr class="border-b border-slate-800 ${rowClass}">
+          <td class="p-2 text-slate-200">${name}</td>
+          <td class="p-2 text-right mono text-slate-300">${r.positions}</td>
+          <td class="p-2 text-right mono text-slate-300">${wtPct.toFixed(1)}%</td>
+          <td class="p-2 text-right mono text-emerald-400">${r.ma[3]}</td>
+          <td class="p-2 text-right mono text-emerald-600">${r.ma[2]}</td>
+          <td class="p-2 text-right mono text-amber-500">${r.ma[1]}</td>
+          <td class="p-2 text-right mono text-red-400">${r.ma[0]}</td>
+          <td class="p-2 text-right mono ${scoreColor}">${avgSc.toFixed(1)}</td>
+        </tr>`;
+      }).join('');
     }
 
     // Render screener
