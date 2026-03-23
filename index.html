@@ -336,6 +336,27 @@
           <input type="file" id="analyzer-file-input" accept=".csv" class="hidden" onchange="handleAnalyzerFile(this.files[0]);" />
         </div>
 
+        <!-- Save Bar (shown after CSV loaded) -->
+        <div id="analyzer-save-bar" class="hidden flex flex-wrap items-center gap-3 bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+          <span class="text-slate-400 text-sm font-medium">Portfolio name:</span>
+          <input id="analyzer-portfolio-name" type="text" placeholder="e.g. taa1" maxlength="40"
+                 class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-sm font-medium mono focus:border-indigo-500 focus:outline-none w-48" />
+          <button onclick="savePortfolio()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors">Save</button>
+          <button onclick="resetAnalyzer()" class="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm font-medium transition-colors">New Upload</button>
+          <span id="analyzer-save-status" class="text-xs text-slate-500 ml-auto"></span>
+        </div>
+
+        <!-- Saved Portfolios (always visible) -->
+        <div id="analyzer-saved-portfolios" class="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+            <span class="text-slate-200 font-bold text-sm uppercase tracking-wide">Saved Portfolios</span>
+            <button onclick="loadPortfolioList()" class="text-xs text-slate-500 hover:text-slate-300 transition-colors">Refresh</button>
+          </div>
+          <div id="analyzer-saved-list" class="p-4">
+            <div class="text-slate-500 text-sm text-center py-2">Loading…</div>
+          </div>
+        </div>
+
         <!-- Processing state -->
         <div id="analyzer-loading" class="hidden border-2 border-indigo-500/30 rounded-xl p-10 text-center bg-indigo-500/5">
           <div class="inline-block mb-4">
@@ -18892,6 +18913,7 @@
       showAnalyzerLoading(true, 'Reading ' + file.name);
       const reader = new FileReader();
       reader.onload = function(e) {
+        lastAnalyzerCSVText = e.target.result;
         // Defer to let the loading UI paint
         requestAnimationFrame(() => {
           setTimeout(() => parseAnalyzerCSV(e.target.result), 50);
@@ -19055,6 +19077,8 @@
 
       showAnalyzerLoading(false);
       document.getElementById('analyzer-results').classList.remove('hidden');
+      document.getElementById('analyzer-save-bar').classList.remove('hidden');
+      lastAnalyzerHoldings = holdings;
     }
 
     // CIO Max% per asset class (country/region). Anything not listed defaults to 25%.
@@ -19258,12 +19282,121 @@
       }).join('');
     }
 
+    // ========== PORTFOLIO PERSISTENCE (Vercel Blob) ==========
+
+    let lastAnalyzerCSVText = '';
+    let lastAnalyzerHoldings = [];
+
+    async function loadPortfolioList() {
+      const container = document.getElementById('analyzer-saved-list');
+      try {
+        const res = await fetch('/api/portfolios');
+        if (!res.ok) throw new Error('Failed to load');
+        const portfolios = await res.json();
+        if (portfolios.length === 0) {
+          container.innerHTML = '<div class="text-slate-500 text-sm text-center py-2">No saved portfolios yet</div>';
+          return;
+        }
+        portfolios.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+        container.innerHTML = portfolios.map(p => {
+          const date = new Date(p.uploadedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+          return `<div class="flex items-center justify-between py-2 border-b border-slate-800 last:border-0 group">
+            <div class="flex items-center gap-3">
+              <button onclick="loadPortfolio('${p.name}')" class="text-indigo-400 hover:text-indigo-300 font-medium mono text-sm transition-colors">${p.name}</button>
+              <span class="text-xs text-slate-600">${date}</span>
+            </div>
+            <button onclick="deletePortfolio('${p.name}', this)" class="text-slate-600 hover:text-red-400 text-xs transition-colors opacity-0 group-hover:opacity-100">Delete</button>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        container.innerHTML = '<div class="text-slate-500 text-sm text-center py-2">Could not load saved portfolios</div>';
+      }
+    }
+
+    async function savePortfolio() {
+      const nameInput = document.getElementById('analyzer-portfolio-name');
+      const name = nameInput.value.trim().replace(/[^a-zA-Z0-9_-]/g, '');
+      if (!name) { nameInput.focus(); return; }
+      if (lastAnalyzerHoldings.length === 0) return;
+
+      const status = document.getElementById('analyzer-save-status');
+      status.textContent = 'Saving…';
+      status.className = 'text-xs text-indigo-400 ml-auto';
+
+      try {
+        const holdings = lastAnalyzerHoldings.map(h => ({
+          symbol: h.symbol, shares: h.shares, costBasis: h.costBasis,
+        }));
+        const res = await fetch('/api/portfolios', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, csvText: lastAnalyzerCSVText, holdings }),
+        });
+        if (!res.ok) throw new Error('Save failed');
+        status.textContent = 'Saved!';
+        status.className = 'text-xs text-emerald-400 ml-auto';
+        loadPortfolioList();
+        setTimeout(() => { status.textContent = ''; }, 3000);
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+        status.className = 'text-xs text-red-400 ml-auto';
+      }
+    }
+
+    async function loadPortfolio(name) {
+      showAnalyzerLoading(true, 'Loading ' + name + '…');
+      document.getElementById('analyzer-save-bar').classList.add('hidden');
+      document.getElementById('analyzer-results').classList.add('hidden');
+      try {
+        const res = await fetch('/api/portfolios/' + encodeURIComponent(name));
+        if (!res.ok) throw new Error('Not found');
+        const data = await res.json();
+        document.getElementById('analyzer-portfolio-name').value = data.name || name;
+        if (data.csvText) {
+          lastAnalyzerCSVText = data.csvText;
+          parseAnalyzerCSV(data.csvText);
+        } else if (data.holdings) {
+          lastAnalyzerCSVText = 'Symbol,Shares,Cost Basis\n' + data.holdings.map(h => h.symbol + ',' + h.shares + ',' + h.costBasis).join('\n');
+          parseAnalyzerCSV(lastAnalyzerCSVText);
+        } else {
+          throw new Error('No data in portfolio');
+        }
+      } catch (e) {
+        showAnalyzerLoading(false);
+        alert('Failed to load portfolio: ' + e.message);
+      }
+    }
+
+    async function deletePortfolio(name, btn) {
+      if (!confirm('Delete portfolio "' + name + '"?')) return;
+      if (btn) btn.textContent = '…';
+      try {
+        const res = await fetch('/api/portfolios/' + encodeURIComponent(name), { method: 'DELETE' });
+        if (!res.ok) throw new Error('Delete failed');
+        loadPortfolioList();
+      } catch (e) {
+        alert('Failed to delete: ' + e.message);
+        if (btn) btn.textContent = 'Delete';
+      }
+    }
+
+    function resetAnalyzer() {
+      document.getElementById('analyzer-save-bar').classList.add('hidden');
+      document.getElementById('analyzer-results').classList.add('hidden');
+      document.getElementById('analyzer-unrecognized').classList.add('hidden');
+      document.getElementById('analyzer-dropzone').classList.remove('hidden');
+      document.getElementById('analyzer-portfolio-name').value = '';
+      lastAnalyzerCSVText = '';
+      lastAnalyzerHoldings = [];
+    }
+
     // Initialize
     initFilterDropdowns();
     applyFilters();
     updateConfigSummary();
     renderCioConstraintsUI();
     renderCioSubTab('overview');
+    loadPortfolioList();
   </script>
 </body>
 </html>
