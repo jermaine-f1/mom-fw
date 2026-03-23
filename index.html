@@ -336,6 +336,18 @@
           <input type="file" id="analyzer-file-input" accept=".csv" class="hidden" onchange="handleAnalyzerFile(this.files[0]);" />
         </div>
 
+        <!-- Processing state -->
+        <div id="analyzer-loading" class="hidden border-2 border-indigo-500/30 rounded-xl p-10 text-center bg-indigo-500/5">
+          <div class="inline-block mb-4">
+            <svg class="animate-spin h-10 w-10 text-indigo-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+          </div>
+          <div class="text-indigo-300 font-medium text-lg mb-1" id="analyzer-loading-title">Processing portfolio…</div>
+          <div class="text-slate-400 text-sm" id="analyzer-loading-detail">Parsing CSV</div>
+        </div>
+
         <!-- Unrecognized symbols banner (hidden by default) -->
         <div id="analyzer-unrecognized" class="hidden bg-amber-900/30 border border-amber-600/50 rounded-xl p-4 text-amber-300">
           <span class="font-bold">⚠ Unrecognized symbols:</span>
@@ -18052,12 +18064,24 @@
       }
     }
 
-    // Render screener
-    function renderSignals() {
-      const topIdeasSet = new Set(rankedETFs.slice(0, settings.topCount).map(e => e.ticker));
-      const topInView = filteredETFs.filter(e => topIdeasSet.has(e.ticker)).length;
-      const avgScore = filteredETFs.length > 0 ? (filteredETFs.reduce((s, e) => s + e.score, 0) / filteredETFs.length).toFixed(1) : '—';
-      const aboveAllMA = filteredETFs.filter(e => e.maStatus === 3).length;
+    // ===================== PORTFOLIO ANALYZER =====================
+    function showAnalyzerLoading(show, detail) {
+      document.getElementById('analyzer-dropzone').classList.toggle('hidden', show);
+      document.getElementById('analyzer-loading').classList.toggle('hidden', !show);
+      if (detail) document.getElementById('analyzer-loading-detail').textContent = detail;
+    }
+
+    function handleAnalyzerFile(file) {
+      if (!file) return;
+      showAnalyzerLoading(true, 'Reading ' + file.name);
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        requestAnimationFrame(() => {
+          setTimeout(() => parseAnalyzerCSV(e.target.result), 50);
+        });
+      };
+      reader.readAsText(file);
+    }
 
       document.getElementById('filter-count').textContent = filteredETFs.length;
       document.getElementById('total-count').textContent = rankedETFs.length;
@@ -18150,26 +18174,29 @@
         }
       }
 
-      if (portfolio.length === 0) {
-        document.getElementById('portfolio-stats').innerHTML = '<div class="col-span-full text-center text-slate-500">No positions match criteria. Try adjusting filters.</div>';
-        document.getElementById('portfolio-holdings').innerHTML = '';
-        document.getElementById('excluded-list').innerHTML = '';
-        return;
+      document.getElementById('analyzer-loading-detail').textContent = 'Scoring ' + holdings.length + ' holdings…';
+      renderAnalyzer(holdings, unrecognized);
+    }
+
+    function renderAnalyzer(holdings, unrecognized) {
+      // Show/hide unrecognized banner
+      const banner = document.getElementById('analyzer-unrecognized');
+      if (unrecognized.length > 0) {
+        banner.classList.remove('hidden');
+        document.getElementById('analyzer-unrecognized-list').textContent = ' ' + unrecognized.join(', ');
+      } else {
+        banner.classList.add('hidden');
       }
 
-      const weight = (100 / portfolio.length).toFixed(1);
-      const avgRet = portfolio.reduce((s, e) => s + e.return6m, 0) / portfolio.length;
-      const avgScore = portfolio.reduce((s, e) => s + e.score, 0) / portfolio.length;
-      let totalCorr = 0, corrCount = 0;
-      for (let i = 0; i < portfolio.length; i++) {
-        for (let j = i + 1; j < portfolio.length; j++) {
-          totalCorr += getCorrelation(portfolio[i].ticker, portfolio[j].ticker);
-          corrCount++;
-        }
-      }
-      const avgCorr = corrCount > 0 ? totalCorr / corrCount : 0;
-      const countries = new Set(portfolio.map(e => e.country)).size;
-      const sectors = new Set(portfolio.map(e => e.sector)).size;
+      // Calculate scores for instruments
+      holdings.forEach(h => {
+        const scored = calculateScore(h.instrument);
+        h.instrument = scored;
+        h.score = scored.score;
+        h.mktValue = h.shares * h.instrument.price;
+        h.pnl = h.shares * (h.instrument.price - h.costBasis);
+        h.pnlPct = h.costBasis > 0 ? ((h.instrument.price - h.costBasis) / h.costBasis * 100) : 0;
+      });
 
       document.getElementById('portfolio-stats').innerHTML = `
         <div class="bg-slate-800 rounded-lg p-3 text-center">
@@ -18259,10 +18286,8 @@
       settings.topCount = parseInt(document.getElementById('t-topcount').value);
       settings.zScoreSteep = parseFloat(document.getElementById('t-zscore-steep').value);
 
-      document.getElementById('t-topcount-val').textContent = settings.topCount;
-      document.getElementById('t-zscore-steep-val').textContent = settings.zScoreSteep.toFixed(1);
-      
-      updateConfigSummary();
+      showAnalyzerLoading(false);
+      document.getElementById('analyzer-results').classList.remove('hidden');
     }
 
     function updateConfigSummary() {
