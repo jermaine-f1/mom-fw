@@ -18,7 +18,7 @@
     <div class="mb-6">
       <h1 class="text-2xl md:text-3xl font-bold">📊 Momentum Portfolio Framework</h1>
       <p class="text-slate-400 text-sm">CIO Dashboard | Diversified Quality Momentum Screener</p>
-      <p class="text-emerald-400 text-xs mono mt-1">Live Data Generated: 2026-03-22 23:06 ET</p>
+      <p class="text-emerald-400 text-xs mono mt-1">Live Data Generated: 2026-03-22 23:16 ET</p>
     </div>
 
     <!-- Tabs -->
@@ -475,21 +475,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Asset Class Constraints — CIO Limits -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <h3 class="text-lg font-bold text-slate-200 mb-4">Asset Class Constraints — CIO Limits</h3>
-          <div id="cio-constraints-container"></div>
-          <div class="mt-4 flex gap-3">
-            <button id="btn-save-constraints" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold transition-colors">
-              Save Constraints
-            </button>
-            <button id="btn-reset-constraints" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg font-medium transition-colors">
-              Reset Defaults
-            </button>
-          </div>
-        </div>
-
       </div>
     </div>
 
@@ -706,11 +691,11 @@
     ],
     "category": "ETF",
     "isETF": true,
-    "price": 85.26,
-    "return6m": -11.11,
+    "price": 85.42,
+    "return6m": -10.95,
     "sortino": 0.9,
     "weeksDown": 8,
-    "zScore": -2.67,
+    "zScore": -2.64,
     "slope": -0.055,
     "aboveMA30": false,
     "aboveMA60": false,
@@ -1272,11 +1257,11 @@
     ],
     "category": "Equities",
     "isETF": false,
-    "price": 500.5,
-    "return6m": -22.4,
+    "price": 501.0,
+    "return6m": -22.33,
     "sortino": 0.52,
     "weeksDown": 8,
-    "zScore": -2.6,
+    "zScore": -2.59,
     "slope": -0.18,
     "aboveMA30": false,
     "aboveMA60": false,
@@ -5047,7 +5032,7 @@
   "EWY-FELE": 0.35,
   "EWY-FTT.TO": 0.36,
   "EWY-EXPO": 0.15,
-  "EWY-PLOW": 0.24,
+  "EWY-PLOW": 0.25,
   "EWY-DCI": 0.33,
   "EWY-DE": 0.3,
   "EWY-CMT": 0.15,
@@ -5468,7 +5453,7 @@
   "2828.HK-BAMI.MI": 0.21,
   "2828.HK-LIT": 0.39,
   "2828.HK-AAPL": 0.09,
-  "2828.HK-BABA": 0.49,
+  "2828.HK-BABA": 0.5,
   "2828.HK-MU": 0.13,
   "2828.HK-0700.HK": 0.83,
   "2828.HK-VEA": 0.23,
@@ -5536,7 +5521,7 @@
   "2828.HK-JNJ": 0.06,
   "2828.HK-GDX": 0.1,
   "2828.HK-EZA": 0.25,
-  "2828.HK-EWW": 0.15,
+  "2828.HK-EWW": 0.16,
   "2828.HK-COCO": -0.0,
   "2828.HK-XBI": 0.06,
   "2828.HK-LLY": 0.06,
@@ -7666,7 +7651,7 @@
   "GREK-XLE": 0.22,
   "GREK-IBIT": 0.28,
   "XLI-SPHQ": 0.87,
-  "XLI-SPMO": 0.79,
+  "XLI-SPMO": 0.78,
   "XLI-KWEB": 0.35,
   "XLI-MCHI": 0.33,
   "XLI-SMH": 0.66,
@@ -17981,146 +17966,6 @@
       applySettings();
     }
 
-    // ========== CIO ASSET CLASS CONSTRAINTS ==========
-
-    const CIO_CONSTRAINT_DEFAULTS = [
-      { key: 'em', name: 'EM', color: '#10b981', current: 31.4, min: 0, max: 30 },
-      { key: 'dm', name: 'DM', color: '#818cf8', current: 18.1, min: 0, max: 30 },
-      { key: 'commodities', name: 'Commodities', color: '#f59e0b', current: 25.3, min: 0, max: 35 },
-      { key: 'cash', name: 'Cash', color: '#22d3ee', current: 25.2, min: 5, max: 40 }
-    ];
-
-    let cioConstraints = JSON.parse(JSON.stringify(CIO_CONSTRAINT_DEFAULTS));
-
-    function renderCioConstraints() {
-      const container = document.getElementById('cio-constraints-container');
-      if (!container) return;
-
-      const totalCurrent = cioConstraints.reduce((s, c) => s + c.current, 0);
-      const isBalanced = Math.abs(totalCurrent - 100) < 0.05;
-
-      // Stacked allocation bar
-      let stackedSegments = '';
-      let legendItems = '';
-      let cumPct = 0;
-      cioConstraints.forEach(c => {
-        stackedSegments += `<div style="width:${c.current}%;background:${c.color};height:100%;position:absolute;left:${cumPct}%" title="${c.name}: ${c.current}%"></div>`;
-        legendItems += `<div class="flex items-center gap-1.5 text-xs"><span style="background:${c.color};width:10px;height:10px;border-radius:2px;display:inline-block"></span><span class="text-slate-300">${c.name} ${c.current}%</span></div>`;
-        cumPct += c.current;
-      });
-
-      let html = `
-        <div class="mb-4">
-          <div class="text-xs text-slate-400 mb-1">Portfolio Allocation</div>
-          <div style="position:relative;height:20px;border-radius:6px;overflow:hidden;background:#1e293b">${stackedSegments}</div>
-          <div class="flex gap-4 mt-2">${legendItems}</div>
-        </div>
-        <div class="space-y-3">
-      `;
-
-      cioConstraints.forEach((c, i) => {
-        const overMax = c.current > c.max;
-        const underMin = c.min > 0 && c.current < c.min;
-        const violation = overMax || underMin;
-
-        let statusBadge, bgClass, borderClass;
-        if (overMax) {
-          const diff = (c.current - c.max).toFixed(1);
-          statusBadge = `<span class="text-xs px-2 py-0.5 rounded-full bg-red-900/60 text-red-400 font-medium">↑ ${diff}% over max</span>`;
-          bgClass = '#1a0505';
-          borderClass = '#7f1d1d';
-        } else if (underMin) {
-          const diff = (c.min - c.current).toFixed(1);
-          statusBadge = `<span class="text-xs px-2 py-0.5 rounded-full bg-amber-900/60 text-amber-400 font-medium">↓ ${diff}% below min</span>`;
-          bgClass = '#1c1200';
-          borderClass = '#78350f';
-        } else {
-          statusBadge = `<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-900/60 text-emerald-400 font-medium">✓ Within range</span>`;
-          bgClass = '#0f172a';
-          borderClass = '#1e293b';
-        }
-
-        const fillColor = overMax ? '#dc2626' : underMin ? '#d97706' : c.color;
-        const fillWidth = Math.min(c.current, 100);
-
-        html += `
-          <div class="rounded-lg p-4" style="background:${bgClass};border:1px solid ${borderClass}">
-            <div class="flex flex-wrap items-center gap-3 mb-2">
-              <span class="font-bold text-sm" style="color:${c.color}">${c.name}</span>
-              <span class="text-sm text-slate-300 mono">Current ${c.current.toFixed(1)}%</span>
-              <label class="text-xs text-slate-400">Min%
-                <input type="number" min="0" max="100" step="1" value="${c.min}" data-constraint-idx="${i}" data-constraint-field="min"
-                  class="ml-1 w-16 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200 mono cio-constraint-input">
-              </label>
-              <label class="text-xs text-slate-400">Max%
-                <input type="number" min="0" max="100" step="1" value="${c.max}" data-constraint-idx="${i}" data-constraint-field="max"
-                  class="ml-1 w-16 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200 mono cio-constraint-input">
-              </label>
-              ${statusBadge}
-            </div>
-            <div style="position:relative;height:12px;background:#334155;border-radius:4px;overflow:visible">
-              <div style="position:absolute;left:0;top:0;height:100%;width:${fillWidth}%;background:${fillColor};border-radius:4px"></div>
-              ${c.min > 0 ? `<div style="position:absolute;left:${c.min}%;top:-2px;width:2px;height:16px;background:#d97706;border-radius:1px" title="Min ${c.min}%"></div>` : ''}
-              <div style="position:absolute;left:${c.max}%;top:-2px;width:2px;height:16px;background:#dc2626;border-radius:1px" title="Max ${c.max}%"></div>
-            </div>
-            <div class="flex justify-between text-xs text-slate-500 mt-1 mono">
-              <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
-            </div>
-          </div>
-        `;
-      });
-
-      html += '</div>';
-
-      // Summary footer
-      const totalColor = isBalanced ? 'text-emerald-400' : 'text-red-400';
-      const totalBg = isBalanced ? 'bg-emerald-900/30 border-emerald-800' : 'bg-red-900/30 border-red-800';
-      const totalLabel = isBalanced ? '✓ Balanced' : '≠ 100%';
-      html += `
-        <div class="mt-4 p-3 rounded-lg border ${totalBg}">
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-300">Total Allocated</span>
-            <span class="font-bold mono ${totalColor}">${totalCurrent.toFixed(1)}% — ${totalLabel}</span>
-          </div>
-        </div>
-      `;
-
-      container.innerHTML = html;
-
-      // Bind input listeners
-      container.querySelectorAll('.cio-constraint-input').forEach(input => {
-        input.addEventListener('input', function() {
-          const idx = parseInt(this.dataset.constraintIdx);
-          const field = this.dataset.constraintField;
-          const val = parseFloat(this.value);
-          if (!isNaN(val) && val >= 0 && val <= 100) {
-            cioConstraints[idx][field] = val;
-            renderCioConstraints();
-          }
-        });
-      });
-    }
-
-    function saveCioConstraints() {
-      // Already stored in cioConstraints object in memory
-      renderCioConstraints();
-    }
-
-    function resetCioConstraints() {
-      cioConstraints = JSON.parse(JSON.stringify(CIO_CONSTRAINT_DEFAULTS));
-      renderCioConstraints();
-    }
-
-    // Delegated listeners for Save/Reset buttons
-    document.addEventListener('click', function(e) {
-      if (e.target && e.target.id === 'btn-save-constraints') {
-        saveCioConstraints();
-      }
-      if (e.target && e.target.id === 'btn-reset-constraints') {
-        resetCioConstraints();
-      }
-    });
-
     // ========== CIO SIGNALS DASHBOARD ==========
 
     const CIO_REGIONS = {
@@ -18455,7 +18300,6 @@
     applyFilters();
     updateConfigSummary();
     renderCioSubTab('overview');
-    renderCioConstraints();
   </script>
 </body>
 </html>
