@@ -19351,7 +19351,7 @@
       document.getElementById('analyzer-save-bar').classList.add('hidden');
       document.getElementById('analyzer-results').classList.add('hidden');
       try {
-        const res = await fetch('/api/portfolios/' + encodeURIComponent(name));
+        const res = await fetch('/api/portfolios?name=' + encodeURIComponent(name));
         if (!res.ok) {
           const errBody = await res.json().catch(() => ({}));
           throw new Error(errBody.error || `Load failed (HTTP ${res.status})`);
@@ -19377,7 +19377,7 @@
       if (!confirm('Delete portfolio "' + name + '"?')) return;
       if (btn) btn.textContent = '…';
       try {
-        const res = await fetch('/api/portfolios/' + encodeURIComponent(name), { method: 'DELETE' });
+        const res = await fetch('/api/portfolios?name=' + encodeURIComponent(name), { method: 'DELETE' });
         if (!res.ok) {
           const errBody = await res.json().catch(() => ({}));
           throw new Error(errBody.error || `Delete failed (HTTP ${res.status})`);
