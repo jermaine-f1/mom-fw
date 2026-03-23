@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       const data = JSON.stringify({ name, csvText, holdings, savedAt: new Date().toISOString() });
       const blob = await put(`portfolios/${name}.json`, data, {
         contentType: 'application/json',
-        access: 'public',
+        access: 'private',
         addRandomSuffix: false,
       });
       return res.status(200).json({ url: blob.url, name });
