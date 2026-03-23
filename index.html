@@ -18,7 +18,7 @@
     <div class="mb-6">
       <h1 class="text-2xl md:text-3xl font-bold">📊 Momentum Portfolio Framework</h1>
       <p class="text-slate-400 text-sm">CIO Dashboard | Diversified Quality Momentum Screener</p>
-      <p class="text-emerald-400 text-xs mono mt-1">Live Data Generated: 2026-03-22 22:50 ET</p>
+      <p class="text-emerald-400 text-xs mono mt-1">Live Data Generated: 2026-03-22 23:42 ET</p>
     </div>
 
     <!-- Tabs -->
@@ -667,6 +667,27 @@
     "maxDD": -13.8
   },
   {
+    "ticker": "USO",
+    "name": "United States Oil Fund",
+    "sector": "Energy",
+    "country": "Commodities",
+    "regions": [
+      "Commodities"
+    ],
+    "category": "ETF",
+    "isETF": true,
+    "price": 121.43,
+    "return6m": 65.17,
+    "sortino": 1.18,
+    "weeksDown": 2,
+    "zScore": 6.33,
+    "slope": 0.283,
+    "aboveMA30": true,
+    "aboveMA60": true,
+    "aboveMA200": true,
+    "maxDD": -26.0
+  },
+  {
     "ticker": "INDA",
     "name": "iShares MSCI India ETF",
     "sector": "ETF",
@@ -852,11 +873,11 @@
     ],
     "category": "ETF",
     "isETF": true,
-    "price": 85.52,
-    "return6m": -10.84,
-    "sortino": 0.91,
+    "price": 85.34,
+    "return6m": -11.03,
+    "sortino": 0.9,
     "weeksDown": 8,
-    "zScore": -2.63,
+    "zScore": -2.66,
     "slope": -0.055,
     "aboveMA30": false,
     "aboveMA60": false,
@@ -1138,11 +1159,11 @@
     ],
     "category": "ETF",
     "isETF": true,
-    "price": 31.86,
-    "return6m": 8.68,
-    "sortino": 0.99,
+    "price": 31.76,
+    "return6m": 8.34,
+    "sortino": 0.98,
     "weeksDown": 4,
-    "zScore": -0.34,
+    "zScore": -0.4,
     "slope": 0.136,
     "aboveMA30": false,
     "aboveMA60": false,
@@ -1206,7 +1227,7 @@
     "isETF": true,
     "price": 75.24,
     "return6m": 3.15,
-    "sortino": 1.47,
+    "sortino": 1.46,
     "weeksDown": 6,
     "zScore": -1.45,
     "slope": 0.075,
@@ -1418,11 +1439,11 @@
     ],
     "category": "Equities",
     "isETF": false,
-    "price": 501.5,
-    "return6m": -22.25,
+    "price": 501.0,
+    "return6m": -22.33,
     "sortino": 0.52,
     "weeksDown": 8,
-    "zScore": -2.58,
+    "zScore": -2.59,
     "slope": -0.18,
     "aboveMA30": false,
     "aboveMA60": false,
@@ -4151,6 +4172,7 @@
   }
 ];
     const CORRELATIONS = {
+  "DBC-USO": 0.87,
   "DBC-INDA": 0.02,
   "DBC-SHY": -0.2,
   "DBC-EWJ": 0.19,
@@ -4315,6 +4337,170 @@
   "DBC-XLB": 0.27,
   "DBC-XLE": 0.61,
   "DBC-IBIT": 0.12,
+  "USO-INDA": -0.05,
+  "USO-SHY": -0.24,
+  "USO-EWJ": 0.05,
+  "USO-COPX": 0.15,
+  "USO-EWT": 0.08,
+  "USO-EWY": -0.0,
+  "USO-GLD": 0.17,
+  "USO-PICK": 0.14,
+  "USO-2828.HK": 0.07,
+  "USO-VNM": 0.03,
+  "USO-ITA": 0.16,
+  "USO-SPY": 0.14,
+  "USO-QQQ": 0.13,
+  "USO-EWP": -0.03,
+  "USO-EWS": 0.1,
+  "USO-EPOL": 0.04,
+  "USO-EMXC": 0.03,
+  "USO-EWC": 0.16,
+  "USO-XLU": 0.04,
+  "USO-EWI": 0.04,
+  "USO-VOOG": 0.13,
+  "USO-3110.HK": 0.09,
+  "USO-GREK": -0.05,
+  "USO-XLI": 0.1,
+  "USO-SPHQ": 0.05,
+  "USO-SPMO": 0.14,
+  "USO-KWEB": 0.09,
+  "USO-MCHI": 0.12,
+  "USO-SMH": 0.13,
+  "USO-BAMI.MI": -0.01,
+  "USO-LIT": 0.09,
+  "USO-AAPL": 0.1,
+  "USO-BABA": 0.07,
+  "USO-MU": 0.13,
+  "USO-0700.HK": 0.07,
+  "USO-VEA": 0.04,
+  "USO-VHC": 0.01,
+  "USO-KTOS": 0.14,
+  "USO-MRCY": 0.01,
+  "USO-ZWS": 0.05,
+  "USO-GS": 0.08,
+  "USO-MS": 0.1,
+  "USO-JPM": 0.09,
+  "USO-WTS": 0.04,
+  "USO-WNC": 0.06,
+  "USO-TRN": -0.01,
+  "USO-TIH.TO": -0.02,
+  "USO-TTC": 0.07,
+  "USO-BLD": -0.01,
+  "USO-TWI": 0.05,
+  "USO-TKR": 0.07,
+  "USO-TEX": 0.07,
+  "USO-TNC": 0.07,
+  "USO-TEL": 0.04,
+  "USO-SGU": -0.03,
+  "USO-SNA": -0.01,
+  "USO-AOS": -0.02,
+  "USO-ROK": 0.06,
+  "USO-PCAR": 0.08,
+  "USO-OSK": 0.11,
+  "USO-OFLX": -0.07,
+  "USO-ODFL": -0.02,
+  "USO-NSSC": -0.08,
+  "USO-MTL.TO": 0.07,
+  "USO-MSM": 0.06,
+  "USO-MSA": -0.03,
+  "USO-LMT": 0.1,
+  "USO-LNN": 0.06,
+  "USO-HY": 0.07,
+  "USO-HDSN": 0.04,
+  "USO-GGG": 0.04,
+  "USO-GIC": -0.03,
+  "USO-ROCK": 0.0,
+  "USO-GD": 0.14,
+  "USO-GENC": 0.04,
+  "USO-FTDR": -0.01,
+  "USO-FELE": 0.03,
+  "USO-FTT.TO": 0.12,
+  "USO-EXPO": -0.04,
+  "USO-PLOW": -0.06,
+  "USO-DCI": 0.04,
+  "USO-DE": 0.13,
+  "USO-CMT": 0.07,
+  "USO-CAT": 0.1,
+  "USO-WHD": 0.36,
+  "USO-BLBD": 0.05,
+  "USO-ATKR": 0.09,
+  "USO-ALSN": 0.07,
+  "USO-AIN": 0.04,
+  "USO-ALG": 0.02,
+  "USO-ACM": 0.09,
+  "USO-AYI": 0.06,
+  "USO-GOOG": 0.1,
+  "USO-XLV": -0.1,
+  "USO-EWZ": 0.1,
+  "USO-ILF": 0.13,
+  "USO-META": 0.07,
+  "USO-JNJ": -0.11,
+  "USO-GDX": 0.1,
+  "USO-EZA": 0.03,
+  "USO-EWW": 0.11,
+  "USO-COCO": -0.04,
+  "USO-XBI": -0.03,
+  "USO-LLY": -0.05,
+  "USO-ECH": 0.03,
+  "USO-VMI": 0.05,
+  "USO-TTEK": 0.09,
+  "USO-THR": 0.07,
+  "USO-OTIS": -0.07,
+  "USO-MLI": 0.05,
+  "USO-LECO": 0.02,
+  "USO-GRC": -0.03,
+  "USO-GNRC": 0.05,
+  "USO-GLDD": 0.08,
+  "USO-ERII": -0.03,
+  "USO-CMI": 0.08,
+  "USO-BMI": 0.04,
+  "USO-ASTE": 0.04,
+  "USO-EWN": 0.02,
+  "USO-XLF": 0.05,
+  "USO-NEM": 0.11,
+  "USO-SLV": 0.14,
+  "USO-TSLA": 0.09,
+  "USO-BAC": 0.1,
+  "USO-FEZ": -0.01,
+  "USO-LRCX": 0.05,
+  "USO-KGH.WA": 0.11,
+  "USO-ALB": 0.1,
+  "USO-IREN": 0.08,
+  "USO-RKLB": 0.03,
+  "USO-MPWR": 0.08,
+  "USO-VLO": 0.4,
+  "USO-PALL": 0.07,
+  "USO-IAT": 0.09,
+  "USO-EWM": -0.01,
+  "USO-XLY": 0.09,
+  "USO-XLP": -0.06,
+  "USO-ITB": -0.07,
+  "USO-RSP": 0.1,
+  "USO-IWM": 0.08,
+  "USO-MAGS": 0.13,
+  "USO-VOOV": 0.11,
+  "USO-EWL": -0.1,
+  "USO-EWG": -0.05,
+  "USO-EWU": 0.09,
+  "USO-EWA": 0.09,
+  "USO-EWQ": -0.01,
+  "USO-EWD": 0.02,
+  "USO-IEFA": 0.03,
+  "USO-EIS": 0.02,
+  "USO-EPU": 0.12,
+  "USO-EIDO": 0.03,
+  "USO-TUR": -0.03,
+  "USO-UAE": -0.11,
+  "USO-KSA": 0.07,
+  "USO-ARGT": 0.14,
+  "USO-THD": 0.09,
+  "USO-EPHE": -0.04,
+  "USO-QAT": -0.06,
+  "USO-CNYA": 0.12,
+  "USO-MOO": 0.22,
+  "USO-XLB": 0.12,
+  "USO-XLE": 0.59,
+  "USO-IBIT": 0.05,
   "INDA-SHY": 0.05,
   "INDA-EWJ": 0.45,
   "INDA-COPX": 0.35,
@@ -5614,7 +5800,7 @@
   "2828.HK-BAMI.MI": 0.21,
   "2828.HK-LIT": 0.39,
   "2828.HK-AAPL": 0.09,
-  "2828.HK-BABA": 0.5,
+  "2828.HK-BABA": 0.49,
   "2828.HK-MU": 0.13,
   "2828.HK-0700.HK": 0.83,
   "2828.HK-VEA": 0.23,
@@ -5682,7 +5868,7 @@
   "2828.HK-JNJ": 0.06,
   "2828.HK-GDX": 0.1,
   "2828.HK-EZA": 0.25,
-  "2828.HK-EWW": 0.16,
+  "2828.HK-EWW": 0.15,
   "2828.HK-COCO": -0.0,
   "2828.HK-XBI": 0.06,
   "2828.HK-LLY": 0.06,
@@ -7652,7 +7838,7 @@
   "3110.HK-EWG": 0.14,
   "3110.HK-EWU": 0.19,
   "3110.HK-EWA": 0.15,
-  "3110.HK-EWQ": 0.2,
+  "3110.HK-EWQ": 0.19,
   "3110.HK-EWD": 0.19,
   "3110.HK-IEFA": 0.19,
   "3110.HK-EIS": 0.08,
@@ -7662,7 +7848,7 @@
   "3110.HK-UAE": -0.04,
   "3110.HK-KSA": 0.03,
   "3110.HK-ARGT": 0.05,
-  "3110.HK-THD": 0.19,
+  "3110.HK-THD": 0.18,
   "3110.HK-EPHE": 0.05,
   "3110.HK-QAT": 0.02,
   "3110.HK-CNYA": 0.64,
@@ -17897,380 +18083,6 @@
       reader.readAsText(file);
     }
 
-    function parseAnalyzerCSV(text) {
-      const lines = text.trim().split(/\r?\n/);
-      if (lines.length < 2) return;
-
-      // Parse header — find columns case-insensitively
-      const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
-      const symIdx = header.findIndex(h => h === 'symbol' || h === 'ticker' || h === 'sym');
-      const sharesIdx = header.findIndex(h => h === 'shares' || h === 'quantity' || h === 'qty');
-      const costIdx = header.findIndex(h => h.includes('cost') || h.includes('basis') || h === 'avgcost');
-
-      if (symIdx === -1) {
-        alert('CSV must contain a "Symbol" column');
-        return;
-      }
-
-      // Build ticker lookup map (case-insensitive)
-      const tickerMap = {};
-      etfUniverse.forEach(inst => { tickerMap[inst.ticker.toUpperCase()] = inst; });
-
-      const holdings = [];
-      const unrecognized = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(',').map(c => c.trim());
-        if (!cols[symIdx]) continue;
-        const sym = cols[symIdx].toUpperCase();
-        const shares = sharesIdx !== -1 ? parseFloat(cols[sharesIdx]) || 0 : 0;
-        const costBasis = costIdx !== -1 ? parseFloat(cols[costIdx]) || 0 : 0;
-        const instrument = tickerMap[sym];
-        if (!instrument) {
-          unrecognized.push(sym);
-          continue;
-        }
-        holdings.push({ symbol: sym, shares, costBasis, instrument });
-      }
-
-      document.getElementById('analyzer-loading-detail').textContent = 'Scoring ' + holdings.length + ' holdings…';
-      renderAnalyzer(holdings, unrecognized);
-    }
-
-    function renderAnalyzer(holdings, unrecognized) {
-      // Show/hide unrecognized banner
-      const banner = document.getElementById('analyzer-unrecognized');
-      if (unrecognized.length > 0) {
-        banner.classList.remove('hidden');
-        document.getElementById('analyzer-unrecognized-list').textContent = ' ' + unrecognized.join(', ');
-      } else {
-        banner.classList.add('hidden');
-      }
-
-      // Calculate scores for instruments
-      holdings.forEach(h => {
-        const scored = calculateScore(h.instrument);
-        h.instrument = scored;
-        h.score = scored.score;
-        h.mktValue = h.shares * h.instrument.price;
-        h.pnl = h.shares * (h.instrument.price - h.costBasis);
-        h.pnlPct = h.costBasis > 0 ? ((h.instrument.price - h.costBasis) / h.costBasis * 100) : 0;
-      });
-
-      const totalValue = holdings.reduce((s, h) => s + h.mktValue, 0);
-      const totalCost = holdings.reduce((s, h) => s + h.shares * h.costBasis, 0);
-      const totalPnL = holdings.reduce((s, h) => s + h.pnl, 0);
-      const totalPnLPct = totalCost > 0 ? (totalPnL / totalCost * 100) : 0;
-      const avgScore = holdings.length > 0 ? holdings.reduce((s, h) => s + h.score, 0) / holdings.length : 0;
-
-      // Summary cards
-      document.getElementById('analyzer-summary').innerHTML = [
-        { label: 'Holdings', value: holdings.length, color: 'indigo' },
-        { label: 'Market Value', value: '$' + totalValue.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0}), color: 'cyan' },
-        { label: 'Total P&L', value: (totalPnL >= 0 ? '+' : '') + '$' + totalPnL.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0}) + ' (' + totalPnLPct.toFixed(1) + '%)', color: totalPnL >= 0 ? 'emerald' : 'red' },
-        { label: 'Avg Score', value: avgScore.toFixed(1), color: avgScore >= 60 ? 'emerald' : avgScore >= 40 ? 'amber' : 'red' },
-      ].map(c => `<div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
-        <div class="text-xs text-slate-400 uppercase mb-1">${c.label}</div>
-        <div class="text-xl font-bold text-${c.color}-400 mono">${c.value}</div>
-      </div>`).join('');
-
-      // Risk Strip
-      const wtdScore = totalValue > 0
-        ? holdings.reduce((s, h) => s + h.score * h.mktValue, 0) / totalValue
-        : 0;
-      const ma3Count = holdings.filter(h => h.instrument.aboveMA30 && h.instrument.aboveMA60 && h.instrument.aboveMA200).length;
-      const ma0Count = holdings.filter(h => !h.instrument.aboveMA30 && !h.instrument.aboveMA60 && !h.instrument.aboveMA200).length;
-      const sellCount = holdings.filter(h => !h.instrument.aboveMA30 && !h.instrument.aboveMA60 && !h.instrument.aboveMA200).length;
-      // Buy candidates: top-ranked instruments not already held
-      const heldTickers = new Set(holdings.map(h => h.symbol));
-      const buyCount = rankedETFs.filter(e => e.isETF && !heldTickers.has(e.ticker) && e.score >= 60 && e.aboveMA30 && e.aboveMA60 && e.aboveMA200).length;
-      // Violations: >30% of portfolio value in any single country or sector
-      const MAX_CLASS_PCT = 30;
-      const countryWts = {};
-      const sectorWts = {};
-      holdings.forEach(h => {
-        const c = h.instrument.country || 'Unknown';
-        const s = h.instrument.sector || 'Unknown';
-        countryWts[c] = (countryWts[c] || 0) + h.mktValue;
-        sectorWts[s] = (sectorWts[s] || 0) + h.mktValue;
-      });
-      let violations = 0;
-      if (totalValue > 0) {
-        Object.values(countryWts).forEach(v => { if (v / totalValue * 100 > MAX_CLASS_PCT) violations++; });
-        Object.values(sectorWts).forEach(v => { if (v / totalValue * 100 > MAX_CLASS_PCT) violations++; });
-      }
-
-      document.getElementById('analyzer-risk-strip').innerHTML = [
-        { label: 'Wtd Score', value: wtdScore.toFixed(1), color: wtdScore >= 60 ? 'emerald' : wtdScore >= 40 ? 'amber' : 'red' },
-        { label: 'MA\u20053 Holdings', value: ma3Count, color: 'emerald' },
-        { label: 'MA\u20050 Holdings', value: ma0Count, color: 'red' },
-        { label: 'Sell Signals', value: sellCount, color: 'red' },
-        { label: 'Buy Candidates', value: buyCount, color: 'emerald' },
-        { label: 'Violations', value: violations, color: 'red' },
-      ].map(c => `<div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4 text-center">
-        <div class="text-xs text-slate-400 uppercase mb-1">${c.label}</div>
-        <div class="text-2xl font-bold text-${c.color}-400 mono">${c.value}</div>
-      </div>`).join('');
-
-      // Score Distribution Panel
-      renderAnalyzerDistribution(holdings, totalValue);
-
-      // Holdings table — sort MA desc (primary), Score desc (secondary)
-      holdings.forEach(h => {
-        h.maStatus = (h.instrument.aboveMA30 ? 1 : 0) + (h.instrument.aboveMA60 ? 1 : 0) + (h.instrument.aboveMA200 ? 1 : 0);
-      });
-      holdings.sort((a, b) => b.maStatus - a.maStatus || b.score - a.score);
-
-      const maDot = (above) => above
-        ? '<span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>'
-        : '<span class="inline-block w-3 h-3 rounded-full border border-slate-600"></span>';
-
-      const maPillColors = {
-        3: 'bg-emerald-900 text-emerald-300',
-        2: 'bg-emerald-800/60 text-emerald-400',
-        1: 'bg-amber-900/60 text-amber-300',
-        0: 'bg-red-900/60 text-red-300',
-      };
-
-      document.getElementById('analyzer-table').innerHTML = holdings.map(h => {
-        const weight = totalValue > 0 ? (h.mktValue / totalValue * 100) : 0;
-        const scoreColor = h.score >= 60 ? 'text-emerald-400' : h.score >= 40 ? 'text-amber-400' : 'text-red-400';
-        const borderClass = h.maStatus === 0 ? 'border-l-2 border-l-red-500' : h.maStatus === 1 ? 'border-l-2 border-l-amber-500' : '';
-        return `<tr class="border-b border-slate-800 hover:bg-slate-800/50 ${borderClass}">
-          <td class="p-3 font-medium text-white mono">${h.symbol}</td>
-          <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${maPillColors[h.maStatus]}">${h.maStatus}/3</span></td>
-          <td class="p-3 text-center">${maDot(h.instrument.aboveMA30)}</td>
-          <td class="p-3 text-center">${maDot(h.instrument.aboveMA60)}</td>
-          <td class="p-3 text-center">${maDot(h.instrument.aboveMA200)}</td>
-          <td class="p-3 text-right mono ${scoreColor}">${h.score.toFixed(0)}</td>
-          <td class="p-3 text-right mono text-slate-300">$${h.instrument.price.toFixed(2)}</td>
-          <td class="p-3 text-right mono text-slate-300">$${h.mktValue.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</td>
-          <td class="p-3 text-right mono text-slate-300">${weight.toFixed(1)}%</td>
-          <td class="p-3 text-slate-400 text-xs">${h.instrument.country || '—'}</td>
-        </tr>`;
-      }).join('');
-
-      // Sell/Reduce + Buy Candidates
-      renderAnalyzerActions(holdings, totalValue);
-
-      showAnalyzerLoading(false);
-      document.getElementById('analyzer-results').classList.remove('hidden');
-    }
-
-    // CIO Max% per asset class (country/region). Anything not listed defaults to 25%.
-    const CIO_MAX_PCT = {
-      'US': 40, 'Commodities': 20, 'India': 15,
-      'Emerging Markets': 20, 'Developed Markets': 30,
-      'Japan': 15, 'China': 15, 'Brazil': 10, 'Taiwan': 10,
-    };
-    const CIO_DEFAULT_MAX_PCT = 25;
-
-    function getAssetClassMaxPct(country) {
-      return CIO_MAX_PCT[country] || CIO_DEFAULT_MAX_PCT;
-    }
-
-    function renderAnalyzerActions(holdings, totalValue) {
-      // Build weight-by-country map from holdings
-      const countryWts = {};
-      holdings.forEach(h => {
-        const c = h.instrument.country || 'Unknown';
-        countryWts[c] = (countryWts[c] || 0) + h.mktValue;
-      });
-
-      // --- Sell / Reduce ---
-      const sellRows = [];
-      holdings.forEach(h => {
-        const ma = h.maStatus;
-        const countryPct = totalValue > 0 ? (countryWts[h.instrument.country || 'Unknown'] / totalValue * 100) : 0;
-        const maxPct = getAssetClassMaxPct(h.instrument.country || 'Unknown');
-        const reasons = [];
-        let action = null;
-
-        if (ma === 0) {
-          reasons.push('MA=0/3 — all MAs broken');
-          action = 'Exit';
-        } else if (ma === 1 && h.score < 50) {
-          reasons.push('MA=1/3 + Score < 50');
-          action = 'Exit';
-        } else if (ma === 1 && h.score >= 50) {
-          reasons.push('MA=1/3 + Score \u2265 50');
-          action = 'Reduce';
-        }
-
-        if (countryPct > maxPct) {
-          reasons.push(`${h.instrument.country} at ${countryPct.toFixed(0)}% > ${maxPct}% max`);
-          if (!action) action = 'Reduce';
-        }
-
-        if (action) {
-          sellRows.push({ symbol: h.symbol, ma, score: h.score, reason: reasons.join('; '), action });
-        }
-      });
-
-      const sellTable = document.getElementById('analyzer-sell-table');
-      const sellEmpty = document.getElementById('analyzer-sell-empty');
-      if (sellRows.length === 0) {
-        sellTable.innerHTML = '';
-        sellEmpty.classList.remove('hidden');
-      } else {
-        sellEmpty.classList.add('hidden');
-        const maPill = (ma) => {
-          const colors = { 0: 'bg-red-900/60 text-red-300', 1: 'bg-amber-900/60 text-amber-300', 2: 'bg-emerald-800/60 text-emerald-400', 3: 'bg-emerald-900 text-emerald-300' };
-          return `<span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${colors[ma]}">${ma}/3</span>`;
-        };
-        sellTable.innerHTML = sellRows.map(r => {
-          const scoreColor = r.score >= 60 ? 'text-emerald-400' : r.score >= 40 ? 'text-amber-400' : 'text-red-400';
-          const actionBadge = r.action === 'Exit'
-            ? '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-red-900/60 text-red-300">Exit</span>'
-            : '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-900/60 text-amber-300">Reduce</span>';
-          return `<tr class="border-b border-slate-800">
-            <td class="p-2.5 font-medium text-white mono">${r.symbol}</td>
-            <td class="p-2.5 text-center">${maPill(r.ma)}</td>
-            <td class="p-2.5 text-right mono ${scoreColor}">${r.score.toFixed(0)}</td>
-            <td class="p-2.5 text-xs text-slate-400">${r.reason}</td>
-            <td class="p-2.5 text-center">${actionBadge}</td>
-          </tr>`;
-        }).join('');
-      }
-
-      // --- Buy Candidates ---
-      const heldTickers = new Set(holdings.map(h => h.symbol));
-      const buyCandidates = rankedETFs.filter(e => {
-        if (!e.isETF || heldTickers.has(e.ticker)) return false;
-        const ma = (e.aboveMA30 ? 1 : 0) + (e.aboveMA60 ? 1 : 0) + (e.aboveMA200 ? 1 : 0);
-        if (ma < 2 || e.score < 65) return false;
-        // Asset class must be below CIO max
-        const c = e.country || 'Unknown';
-        const currentPct = totalValue > 0 ? ((countryWts[c] || 0) / totalValue * 100) : 0;
-        const maxPct = getAssetClassMaxPct(c);
-        return currentPct < maxPct;
-      });
-
-      const buyTable = document.getElementById('analyzer-buy-table');
-      const buyEmpty = document.getElementById('analyzer-buy-empty');
-      if (buyCandidates.length === 0) {
-        buyTable.innerHTML = '';
-        buyEmpty.classList.remove('hidden');
-      } else {
-        buyEmpty.classList.add('hidden');
-        buyTable.innerHTML = buyCandidates.slice(0, 15).map(e => {
-          const ma = (e.aboveMA30 ? 1 : 0) + (e.aboveMA60 ? 1 : 0) + (e.aboveMA200 ? 1 : 0);
-          const maPillColors = { 3: 'bg-emerald-900 text-emerald-300', 2: 'bg-emerald-800/60 text-emerald-400' };
-          const scoreColor = e.score >= 60 ? 'text-emerald-400' : 'text-amber-400';
-          const c = e.country || 'Unknown';
-          const currentPct = totalValue > 0 ? ((countryWts[c] || 0) / totalValue * 100) : 0;
-          const maxPct = getAssetClassMaxPct(c);
-          const headroom = (maxPct - currentPct).toFixed(0);
-          const whyParts = [];
-          whyParts.push(`Score ${e.score.toFixed(0)}`);
-          whyParts.push(`MA=${ma}/3`);
-          whyParts.push(`${c} has ${headroom}% headroom`);
-          if (e.return6m > 10) whyParts.push(`+${e.return6m.toFixed(0)}% 6M`);
-          return `<tr class="border-b border-slate-800">
-            <td class="p-2.5 font-medium text-white mono">${e.ticker}</td>
-            <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${maPillColors[ma]}">${ma}/3</span></td>
-            <td class="p-2.5 text-right mono ${scoreColor}">${e.score.toFixed(0)}</td>
-            <td class="p-2.5 text-xs text-slate-400">${whyParts.join(' · ')}</td>
-          </tr>`;
-        }).join('');
-      }
-    }
-
-    function renderAnalyzerDistribution(holdings, totalValue) {
-      // MA status per holding (0-3)
-      const maGroups = [0, 0, 0, 0]; // index = maStatus count
-      const maValues = [0, 0, 0, 0]; // market value per group
-      holdings.forEach(h => {
-        const ma = (h.instrument.aboveMA30 ? 1 : 0) + (h.instrument.aboveMA60 ? 1 : 0) + (h.instrument.aboveMA200 ? 1 : 0);
-        maGroups[ma]++;
-        maValues[ma] += h.mktValue;
-      });
-
-      const maColors = ['#7f1d1d', '#78350f', '#166534', '#065f46'];
-      const maLabels = ['MA\u20050', 'MA\u20051', 'MA\u20052', 'MA\u20053'];
-
-      // Render MA bar (segments ordered MA=3 → MA=0 left to right)
-      const maOrder = [3, 2, 1, 0];
-      let maBarHtml = '';
-      let maLegendHtml = '';
-      maOrder.forEach(i => {
-        const pct = totalValue > 0 ? (maValues[i] / totalValue * 100) : 0;
-        if (pct > 0) {
-          maBarHtml += `<div style="width:${pct}%;background:${maColors[i]}" class="flex items-center justify-center text-xs font-bold text-white/90 mono">${pct >= 8 ? pct.toFixed(0) + '%' : ''}</div>`;
-        }
-        if (maGroups[i] > 0) {
-          maLegendHtml += `<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background:${maColors[i]}"></span>${maLabels[i]} ${maGroups[i]} (${pct.toFixed(0)}%)</span>`;
-        }
-      });
-      document.getElementById('analyzer-ma-bar').innerHTML = maBarHtml;
-      document.getElementById('analyzer-ma-legend').innerHTML = maLegendHtml;
-
-      // Score bands bar
-      const scoreBands = [
-        { label: '\u226570', min: 70, max: Infinity, color: '#065f46', value: 0 },
-        { label: '50\u201369', min: 50, max: 70, color: '#78350f', value: 0 },
-        { label: '<50', min: -Infinity, max: 50, color: '#7f1d1d', value: 0 },
-      ];
-      holdings.forEach(h => {
-        for (const b of scoreBands) {
-          if (h.score >= b.min && h.score < b.max) { b.value += h.mktValue; break; }
-        }
-      });
-      let scoreBarHtml = '';
-      let scoreLegendHtml = '';
-      scoreBands.forEach(b => {
-        const pct = totalValue > 0 ? (b.value / totalValue * 100) : 0;
-        if (pct > 0) {
-          scoreBarHtml += `<div style="width:${pct}%;background:${b.color}" class="flex items-center justify-center text-xs font-bold text-white/90 mono">${pct >= 8 ? pct.toFixed(0) + '%' : ''}</div>`;
-        }
-        const cnt = holdings.filter(h => h.score >= b.min && h.score < b.max).length;
-        if (cnt > 0) {
-          scoreLegendHtml += `<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background:${b.color}"></span>${b.label} ${cnt} (${pct.toFixed(0)}%)</span>`;
-        }
-      });
-      document.getElementById('analyzer-score-bar').innerHTML = scoreBarHtml;
-      document.getElementById('analyzer-score-legend').innerHTML = scoreLegendHtml;
-
-      // Region breakdown table
-      const regionMap = {};
-      holdings.forEach(h => {
-        const region = h.instrument.country || 'Unknown';
-        if (!regionMap[region]) regionMap[region] = { positions: 0, value: 0, ma: [0,0,0,0], totalScore: 0 };
-        const r = regionMap[region];
-        r.positions++;
-        r.value += h.mktValue;
-        const ma = (h.instrument.aboveMA30 ? 1 : 0) + (h.instrument.aboveMA60 ? 1 : 0) + (h.instrument.aboveMA200 ? 1 : 0);
-        r.ma[ma]++;
-        r.totalScore += h.score;
-      });
-
-      const regions = Object.entries(regionMap).sort((a, b) => b[1].value - a[1].value);
-      document.getElementById('analyzer-region-table').innerHTML = regions.map(([name, r]) => {
-        const wtPct = totalValue > 0 ? (r.value / totalValue * 100) : 0;
-        const avgSc = r.positions > 0 ? r.totalScore / r.positions : 0;
-        const scoreColor = avgSc >= 60 ? 'text-emerald-400' : avgSc >= 40 ? 'text-amber-400' : 'text-red-400';
-        const isEM = /emerging|india/i.test(name);
-        const rowClass = isEM && r.ma[0] > 0 ? 'bg-red-900/20' : '';
-        return `<tr class="border-b border-slate-800 ${rowClass}">
-          <td class="p-2 text-slate-200">${name}</td>
-          <td class="p-2 text-right mono text-slate-300">${r.positions}</td>
-          <td class="p-2 text-right mono text-slate-300">${wtPct.toFixed(1)}%</td>
-          <td class="p-2 text-right mono text-emerald-400">${r.ma[3]}</td>
-          <td class="p-2 text-right mono text-emerald-600">${r.ma[2]}</td>
-          <td class="p-2 text-right mono text-amber-500">${r.ma[1]}</td>
-          <td class="p-2 text-right mono text-red-400">${r.ma[0]}</td>
-          <td class="p-2 text-right mono ${scoreColor}">${avgSc.toFixed(1)}</td>
-        </tr>`;
-      }).join('');
-    }
-
-    // Render screener
-    function renderSignals() {
-      const topIdeasSet = new Set(rankedETFs.slice(0, settings.topCount).map(e => e.ticker));
-      const topInView = filteredETFs.filter(e => topIdeasSet.has(e.ticker)).length;
-      const avgScore = filteredETFs.length > 0 ? (filteredETFs.reduce((s, e) => s + e.score, 0) / filteredETFs.length).toFixed(1) : '—';
-      const aboveAllMA = filteredETFs.filter(e => e.maStatus === 3).length;
-
       document.getElementById('filter-count').textContent = filteredETFs.length;
       document.getElementById('total-count').textContent = rankedETFs.length;
 
@@ -18362,26 +18174,29 @@
         }
       }
 
-      if (portfolio.length === 0) {
-        document.getElementById('portfolio-stats').innerHTML = '<div class="col-span-full text-center text-slate-500">No positions match criteria. Try adjusting filters.</div>';
-        document.getElementById('portfolio-holdings').innerHTML = '';
-        document.getElementById('excluded-list').innerHTML = '';
-        return;
+      document.getElementById('analyzer-loading-detail').textContent = 'Scoring ' + holdings.length + ' holdings…';
+      renderAnalyzer(holdings, unrecognized);
+    }
+
+    function renderAnalyzer(holdings, unrecognized) {
+      // Show/hide unrecognized banner
+      const banner = document.getElementById('analyzer-unrecognized');
+      if (unrecognized.length > 0) {
+        banner.classList.remove('hidden');
+        document.getElementById('analyzer-unrecognized-list').textContent = ' ' + unrecognized.join(', ');
+      } else {
+        banner.classList.add('hidden');
       }
 
-      const weight = (100 / portfolio.length).toFixed(1);
-      const avgRet = portfolio.reduce((s, e) => s + e.return6m, 0) / portfolio.length;
-      const avgScore = portfolio.reduce((s, e) => s + e.score, 0) / portfolio.length;
-      let totalCorr = 0, corrCount = 0;
-      for (let i = 0; i < portfolio.length; i++) {
-        for (let j = i + 1; j < portfolio.length; j++) {
-          totalCorr += getCorrelation(portfolio[i].ticker, portfolio[j].ticker);
-          corrCount++;
-        }
-      }
-      const avgCorr = corrCount > 0 ? totalCorr / corrCount : 0;
-      const countries = new Set(portfolio.map(e => e.country)).size;
-      const sectors = new Set(portfolio.map(e => e.sector)).size;
+      // Calculate scores for instruments
+      holdings.forEach(h => {
+        const scored = calculateScore(h.instrument);
+        h.instrument = scored;
+        h.score = scored.score;
+        h.mktValue = h.shares * h.instrument.price;
+        h.pnl = h.shares * (h.instrument.price - h.costBasis);
+        h.pnlPct = h.costBasis > 0 ? ((h.instrument.price - h.costBasis) / h.costBasis * 100) : 0;
+      });
 
       document.getElementById('portfolio-stats').innerHTML = `
         <div class="bg-slate-800 rounded-lg p-3 text-center">
@@ -18471,10 +18286,8 @@
       settings.topCount = parseInt(document.getElementById('t-topcount').value);
       settings.zScoreSteep = parseFloat(document.getElementById('t-zscore-steep').value);
 
-      document.getElementById('t-topcount-val').textContent = settings.topCount;
-      document.getElementById('t-zscore-steep-val').textContent = settings.zScoreSteep.toFixed(1);
-      
-      updateConfigSummary();
+      showAnalyzerLoading(false);
+      document.getElementById('analyzer-results').classList.remove('hidden');
     }
 
     function updateConfigSummary() {
@@ -18840,6 +18653,362 @@
       } else {
         container.innerHTML = renderCioRegionPanel(tabId);
       }
+    }
+
+    // ========== PORTFOLIO ANALYZER ==========
+
+    function handleAnalyzerFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        parseAnalyzerCSV(e.target.result);
+      };
+      reader.readAsText(file);
+    }
+
+    function parseAnalyzerCSV(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) return;
+
+      const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+      const symIdx = header.findIndex(h => h === 'symbol' || h === 'ticker' || h === 'sym');
+      const sharesIdx = header.findIndex(h => h === 'shares' || h === 'quantity' || h === 'qty');
+      const costIdx = header.findIndex(h => h.includes('cost') || h.includes('basis') || h === 'avgcost');
+
+      if (symIdx === -1) {
+        alert('CSV must contain a "Symbol" column');
+        return;
+      }
+
+      const tickerMap = {};
+      etfUniverse.forEach(inst => { tickerMap[inst.ticker.toUpperCase()] = inst; });
+
+      const holdings = [];
+      const unrecognized = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim());
+        if (!cols[symIdx]) continue;
+        const sym = cols[symIdx].toUpperCase();
+        const shares = sharesIdx !== -1 ? parseFloat(cols[sharesIdx]) || 0 : 0;
+        const costBasis = costIdx !== -1 ? parseFloat(cols[costIdx]) || 0 : 0;
+        const instrument = tickerMap[sym];
+        if (!instrument) {
+          unrecognized.push(sym);
+          continue;
+        }
+        holdings.push({ symbol: sym, shares, costBasis, instrument });
+      }
+
+      renderAnalyzer(holdings, unrecognized);
+    }
+
+    function renderAnalyzer(holdings, unrecognized) {
+      const banner = document.getElementById('analyzer-unrecognized');
+      if (unrecognized.length > 0) {
+        banner.classList.remove('hidden');
+        document.getElementById('analyzer-unrecognized-list').textContent = ' ' + unrecognized.join(', ');
+      } else {
+        banner.classList.add('hidden');
+      }
+
+      holdings.forEach(h => {
+        h.score = calculateScore(h.instrument);
+        h.mktValue = h.shares * h.instrument.price;
+        h.pnl = h.shares * (h.instrument.price - h.costBasis);
+        h.pnlPct = h.costBasis > 0 ? ((h.instrument.price - h.costBasis) / h.costBasis * 100) : 0;
+      });
+
+      const totalValue = holdings.reduce((s, h) => s + h.mktValue, 0);
+      const totalCost = holdings.reduce((s, h) => s + h.shares * h.costBasis, 0);
+      const totalPnL = holdings.reduce((s, h) => s + h.pnl, 0);
+      const totalPnLPct = totalCost > 0 ? (totalPnL / totalCost * 100) : 0;
+      const avgScore = holdings.length > 0 ? holdings.reduce((s, h) => s + h.score, 0) / holdings.length : 0;
+
+      document.getElementById('analyzer-summary').innerHTML = [
+        { label: 'Holdings', value: holdings.length, color: 'indigo' },
+        { label: 'Market Value', value: '$' + totalValue.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0}), color: 'cyan' },
+        { label: 'Total P&L', value: (totalPnL >= 0 ? '+' : '') + '$' + totalPnL.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0}) + ' (' + totalPnLPct.toFixed(1) + '%)', color: totalPnL >= 0 ? 'emerald' : 'red' },
+        { label: 'Avg Score', value: avgScore.toFixed(1), color: avgScore >= 60 ? 'emerald' : avgScore >= 40 ? 'amber' : 'red' },
+      ].map(c => `<div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
+        <div class="text-xs text-slate-400 uppercase mb-1">${c.label}</div>
+        <div class="text-xl font-bold text-${c.color}-400 mono">${c.value}</div>
+      </div>`).join('');
+
+      // Risk Strip
+      const wtdScore = totalValue > 0
+        ? holdings.reduce((s, h) => s + h.score * h.mktValue, 0) / totalValue
+        : 0;
+      const ma3Count = holdings.filter(h => h.instrument.aboveMA30 && h.instrument.aboveMA60 && h.instrument.aboveMA200).length;
+      const ma0Count = holdings.filter(h => !h.instrument.aboveMA30 && !h.instrument.aboveMA60 && !h.instrument.aboveMA200).length;
+      const sellCount = ma0Count;
+      const heldTickers = new Set(holdings.map(h => h.symbol));
+      const buyCount = rankedETFs.filter(e => e.isETF && !heldTickers.has(e.ticker) && e.score >= 60 && e.aboveMA30 && e.aboveMA60 && e.aboveMA200).length;
+      const MAX_CLASS_PCT = 30;
+      const countryWtsRisk = {};
+      const sectorWtsRisk = {};
+      holdings.forEach(h => {
+        const c = h.instrument.country || 'Unknown';
+        const s = h.instrument.sector || 'Unknown';
+        countryWtsRisk[c] = (countryWtsRisk[c] || 0) + h.mktValue;
+        sectorWtsRisk[s] = (sectorWtsRisk[s] || 0) + h.mktValue;
+      });
+      let violations = 0;
+      if (totalValue > 0) {
+        Object.values(countryWtsRisk).forEach(v => { if (v / totalValue * 100 > MAX_CLASS_PCT) violations++; });
+        Object.values(sectorWtsRisk).forEach(v => { if (v / totalValue * 100 > MAX_CLASS_PCT) violations++; });
+      }
+
+      document.getElementById('analyzer-risk-strip').innerHTML = [
+        { label: 'Wtd Score', value: wtdScore.toFixed(1), color: wtdScore >= 60 ? 'emerald' : wtdScore >= 40 ? 'amber' : 'red' },
+        { label: 'MA 3 Holdings', value: ma3Count, color: 'emerald' },
+        { label: 'MA 0 Holdings', value: ma0Count, color: 'red' },
+        { label: 'Sell Signals', value: sellCount, color: 'red' },
+        { label: 'Buy Candidates', value: buyCount, color: 'emerald' },
+        { label: 'Violations', value: violations, color: 'red' },
+      ].map(c => `<div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4 text-center">
+        <div class="text-xs text-slate-400 uppercase mb-1">${c.label}</div>
+        <div class="text-2xl font-bold text-${c.color}-400 mono">${c.value}</div>
+      </div>`).join('');
+
+      // Score Distribution Panel
+      renderAnalyzerDistribution(holdings, totalValue);
+
+      // Holdings table — sort MA desc, Score desc
+      holdings.forEach(h => {
+        h.maStatus = (h.instrument.aboveMA30 ? 1 : 0) + (h.instrument.aboveMA60 ? 1 : 0) + (h.instrument.aboveMA200 ? 1 : 0);
+      });
+      holdings.sort((a, b) => b.maStatus - a.maStatus || b.score - a.score);
+
+      const maDot = (above) => above
+        ? '<span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>'
+        : '<span class="inline-block w-3 h-3 rounded-full border border-slate-600"></span>';
+
+      const maPillColors = {
+        3: 'bg-emerald-900 text-emerald-300',
+        2: 'bg-emerald-800/60 text-emerald-400',
+        1: 'bg-amber-900/60 text-amber-300',
+        0: 'bg-red-900/60 text-red-300',
+      };
+
+      document.getElementById('analyzer-table').innerHTML = holdings.map(h => {
+        const weight = totalValue > 0 ? (h.mktValue / totalValue * 100) : 0;
+        const scoreColor = h.score >= 60 ? 'text-emerald-400' : h.score >= 40 ? 'text-amber-400' : 'text-red-400';
+        const borderClass = h.maStatus === 0 ? 'border-l-2 border-l-red-500' : h.maStatus === 1 ? 'border-l-2 border-l-amber-500' : '';
+        return `<tr class="border-b border-slate-800 hover:bg-slate-800/50 ${borderClass}">
+          <td class="p-3 font-medium text-white mono">${h.symbol}</td>
+          <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${maPillColors[h.maStatus]}">${h.maStatus}/3</span></td>
+          <td class="p-3 text-center">${maDot(h.instrument.aboveMA30)}</td>
+          <td class="p-3 text-center">${maDot(h.instrument.aboveMA60)}</td>
+          <td class="p-3 text-center">${maDot(h.instrument.aboveMA200)}</td>
+          <td class="p-3 text-right mono ${scoreColor}">${h.score.toFixed(0)}</td>
+          <td class="p-3 text-right mono text-slate-300">${h.instrument.price.toFixed(2)}</td>
+          <td class="p-3 text-right mono text-slate-300">${h.mktValue.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</td>
+          <td class="p-3 text-right mono text-slate-300">${weight.toFixed(1)}%</td>
+          <td class="p-3 text-slate-400 text-xs">${h.instrument.country || '—'}</td>
+        </tr>`;
+      }).join('');
+
+      // Sell/Reduce + Buy Candidates
+      renderAnalyzerActions(holdings, totalValue);
+
+      document.getElementById('analyzer-results').classList.remove('hidden');
+    }
+
+    // CIO Max% per asset class (country/region). Anything not listed defaults to 25%.
+    const CIO_MAX_PCT = {
+      'US': 40, 'Commodities': 20, 'India': 15,
+      'Emerging Markets': 20, 'Developed Markets': 30,
+      'Japan': 15, 'China': 15, 'Brazil': 10, 'Taiwan': 10,
+    };
+    const CIO_DEFAULT_MAX_PCT = 25;
+
+    function getAssetClassMaxPct(country) {
+      return CIO_MAX_PCT[country] || CIO_DEFAULT_MAX_PCT;
+    }
+
+    function renderAnalyzerActions(holdings, totalValue) {
+      const countryWts = {};
+      holdings.forEach(h => {
+        const c = h.instrument.country || 'Unknown';
+        countryWts[c] = (countryWts[c] || 0) + h.mktValue;
+      });
+
+      // --- Sell / Reduce ---
+      const sellRows = [];
+      holdings.forEach(h => {
+        const ma = h.maStatus;
+        const countryPct = totalValue > 0 ? (countryWts[h.instrument.country || 'Unknown'] / totalValue * 100) : 0;
+        const maxPct = getAssetClassMaxPct(h.instrument.country || 'Unknown');
+        const reasons = [];
+        let action = null;
+
+        if (ma === 0) {
+          reasons.push('MA=0/3 — all MAs broken');
+          action = 'Exit';
+        } else if (ma === 1 && h.score < 50) {
+          reasons.push('MA=1/3 + Score < 50');
+          action = 'Exit';
+        } else if (ma === 1 && h.score >= 50) {
+          reasons.push('MA=1/3 + Score ≥ 50');
+          action = 'Reduce';
+        }
+
+        if (countryPct > maxPct) {
+          reasons.push(`${h.instrument.country} at ${countryPct.toFixed(0)}% > ${maxPct}% max`);
+          if (!action) action = 'Reduce';
+        }
+
+        if (action) {
+          sellRows.push({ symbol: h.symbol, ma, score: h.score, reason: reasons.join('; '), action });
+        }
+      });
+
+      const sellTable = document.getElementById('analyzer-sell-table');
+      const sellEmpty = document.getElementById('analyzer-sell-empty');
+      if (sellRows.length === 0) {
+        sellTable.innerHTML = '';
+        sellEmpty.classList.remove('hidden');
+      } else {
+        sellEmpty.classList.add('hidden');
+        const maPill = (ma) => {
+          const colors = { 0: 'bg-red-900/60 text-red-300', 1: 'bg-amber-900/60 text-amber-300', 2: 'bg-emerald-800/60 text-emerald-400', 3: 'bg-emerald-900 text-emerald-300' };
+          return `<span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${colors[ma]}">${ma}/3</span>`;
+        };
+        sellTable.innerHTML = sellRows.map(r => {
+          const scoreColor = r.score >= 60 ? 'text-emerald-400' : r.score >= 40 ? 'text-amber-400' : 'text-red-400';
+          const actionBadge = r.action === 'Exit'
+            ? '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-red-900/60 text-red-300">Exit</span>'
+            : '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-900/60 text-amber-300">Reduce</span>';
+          return `<tr class="border-b border-slate-800">
+            <td class="p-2.5 font-medium text-white mono">${r.symbol}</td>
+            <td class="p-2.5 text-center">${maPill(r.ma)}</td>
+            <td class="p-2.5 text-right mono ${scoreColor}">${r.score.toFixed(0)}</td>
+            <td class="p-2.5 text-xs text-slate-400">${r.reason}</td>
+            <td class="p-2.5 text-center">${actionBadge}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      // --- Buy Candidates ---
+      const heldTickers = new Set(holdings.map(h => h.symbol));
+      const buyCandidates = rankedETFs.filter(e => {
+        if (!e.isETF || heldTickers.has(e.ticker)) return false;
+        const ma = (e.aboveMA30 ? 1 : 0) + (e.aboveMA60 ? 1 : 0) + (e.aboveMA200 ? 1 : 0);
+        if (ma < 2 || e.score < 65) return false;
+        const c = e.country || 'Unknown';
+        const currentPct = totalValue > 0 ? ((countryWts[c] || 0) / totalValue * 100) : 0;
+        const maxPct = getAssetClassMaxPct(c);
+        return currentPct < maxPct;
+      });
+
+      const buyTable = document.getElementById('analyzer-buy-table');
+      const buyEmpty = document.getElementById('analyzer-buy-empty');
+      if (buyCandidates.length === 0) {
+        buyTable.innerHTML = '';
+        buyEmpty.classList.remove('hidden');
+      } else {
+        buyEmpty.classList.add('hidden');
+        buyTable.innerHTML = buyCandidates.slice(0, 15).map(e => {
+          const ma = (e.aboveMA30 ? 1 : 0) + (e.aboveMA60 ? 1 : 0) + (e.aboveMA200 ? 1 : 0);
+          const maPillColors = { 3: 'bg-emerald-900 text-emerald-300', 2: 'bg-emerald-800/60 text-emerald-400' };
+          const scoreColor = e.score >= 60 ? 'text-emerald-400' : 'text-amber-400';
+          const c = e.country || 'Unknown';
+          const currentPct = totalValue > 0 ? ((countryWts[c] || 0) / totalValue * 100) : 0;
+          const maxPct = getAssetClassMaxPct(c);
+          const headroom = (maxPct - currentPct).toFixed(0);
+          const whyParts = [];
+          whyParts.push(`Score ${e.score.toFixed(0)}`);
+          whyParts.push(`MA=${ma}/3`);
+          whyParts.push(`${c} has ${headroom}% headroom`);
+          if (e.return6m > 10) whyParts.push(`+${e.return6m.toFixed(0)}% 6M`);
+          return `<tr class="border-b border-slate-800">
+            <td class="p-2.5 font-medium text-white mono">${e.ticker}</td>
+            <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${maPillColors[ma]}">${ma}/3</span></td>
+            <td class="p-2.5 text-right mono ${scoreColor}">${e.score.toFixed(0)}</td>
+            <td class="p-2.5 text-xs text-slate-400">${whyParts.join(' · ')}</td>
+          </tr>`;
+        }).join('');
+      }
+    }
+
+    function renderAnalyzerDistribution(holdings, totalValue) {
+      const maGroups = [0, 0, 0, 0];
+      const maValues = [0, 0, 0, 0];
+      holdings.forEach(h => {
+        const ma = (h.instrument.aboveMA30 ? 1 : 0) + (h.instrument.aboveMA60 ? 1 : 0) + (h.instrument.aboveMA200 ? 1 : 0);
+        maGroups[ma]++;
+        maValues[ma] += h.mktValue;
+      });
+
+      const maColors = ['#7f1d1d', '#78350f', '#166534', '#065f46'];
+      const maLabels = ['MA 0', 'MA 1', 'MA 2', 'MA 3'];
+
+      const maOrder = [3, 2, 1, 0];
+      let maBarHtml = '';
+      let maLegendHtml = '';
+      maOrder.forEach(i => {
+        const pct = totalValue > 0 ? (maValues[i] / totalValue * 100) : 0;
+        if (pct > 0) {
+          maBarHtml += `<div style="width:${pct}%;background:${maColors[i]}" class="flex items-center justify-center text-xs font-bold text-white/90 mono">${pct >= 8 ? pct.toFixed(0) + '%' : ''}</div>`;
+        }
+        if (maGroups[i] > 0) {
+          maLegendHtml += `<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background:${maColors[i]}"></span>${maLabels[i]} ${maGroups[i]} (${pct.toFixed(0)}%)</span>`;
+        }
+      });
+      document.getElementById('analyzer-ma-bar').innerHTML = maBarHtml;
+      document.getElementById('analyzer-ma-legend').innerHTML = maLegendHtml;
+
+      const scoreBands = [
+        { label: '≥70', min: 70, max: Infinity, color: '#065f46', value: 0 },
+        { label: '50–69', min: 50, max: 70, color: '#78350f', value: 0 },
+        { label: '<50', min: -Infinity, max: 50, color: '#7f1d1d', value: 0 },
+      ];
+      holdings.forEach(h => {
+        for (const b of scoreBands) {
+          if (h.score >= b.min && h.score < b.max) { b.value += h.mktValue; break; }
+        }
+      });
+      let scoreBarHtml = '';
+      let scoreLegendHtml = '';
+      scoreBands.forEach(b => {
+        const pct = totalValue > 0 ? (b.value / totalValue * 100) : 0;
+        if (pct > 0) {
+          scoreBarHtml += `<div style="width:${pct}%;background:${b.color}" class="flex items-center justify-center text-xs font-bold text-white/90 mono">${pct >= 8 ? pct.toFixed(0) + '%' : ''}</div>`;
+        }
+        scoreLegendHtml += `<span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 rounded-sm" style="background:${b.color}"></span>${b.label}</span>`;
+      });
+      document.getElementById('analyzer-score-bar').innerHTML = scoreBarHtml;
+      document.getElementById('analyzer-score-legend').innerHTML = scoreLegendHtml;
+
+      // Region breakdown table
+      const regions = {};
+      holdings.forEach(h => {
+        const c = h.instrument.country || 'Unknown';
+        if (!regions[c]) regions[c] = { count: 0, value: 0, scores: [], ma: [0,0,0,0] };
+        const r = regions[c];
+        r.count++;
+        r.value += h.mktValue;
+        r.scores.push(h.score);
+        const ma = (h.instrument.aboveMA30 ? 1 : 0) + (h.instrument.aboveMA60 ? 1 : 0) + (h.instrument.aboveMA200 ? 1 : 0);
+        r.ma[ma]++;
+      });
+      const regionRows = Object.entries(regions).sort((a, b) => b[1].value - a[1].value);
+      document.getElementById('analyzer-region-table').innerHTML = regionRows.map(([name, r]) => {
+        const wt = totalValue > 0 ? (r.value / totalValue * 100) : 0;
+        const avg = r.scores.reduce((s, v) => s + v, 0) / r.scores.length;
+        const avgColor = avg >= 60 ? 'text-emerald-400' : avg >= 40 ? 'text-amber-400' : 'text-red-400';
+        return `<tr class="border-b border-slate-800">
+          <td class="p-2 text-white font-medium">${name}</td>
+          <td class="p-2 text-right mono text-slate-300">${r.count}</td>
+          <td class="p-2 text-right mono text-slate-300">${wt.toFixed(1)}%</td>
+          <td class="p-2 text-right mono text-emerald-400">${r.ma[3]}</td>
+          <td class="p-2 text-right mono text-emerald-400">${r.ma[2]}</td>
+          <td class="p-2 text-right mono text-amber-400">${r.ma[1]}</td>
+          <td class="p-2 text-right mono text-red-400">${r.ma[0]}</td>
+          <td class="p-2 text-right mono ${avgColor}">${avg.toFixed(0)}</td>
+        </tr>`;
+      }).join('');
     }
 
     // Initialize
