@@ -19332,7 +19332,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, csvText: lastAnalyzerCSVText, holdings }),
         });
-        if (!res.ok) throw new Error('Save failed');
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error || `Save failed (HTTP ${res.status})`);
+        }
         status.textContent = 'Saved!';
         status.className = 'text-xs text-emerald-400 ml-auto';
         loadPortfolioList();
@@ -19349,7 +19352,10 @@
       document.getElementById('analyzer-results').classList.add('hidden');
       try {
         const res = await fetch('/api/portfolios/' + encodeURIComponent(name));
-        if (!res.ok) throw new Error('Not found');
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error || `Load failed (HTTP ${res.status})`);
+        }
         const data = await res.json();
         document.getElementById('analyzer-portfolio-name').value = data.name || name;
         if (data.csvText) {
@@ -19372,7 +19378,10 @@
       if (btn) btn.textContent = '…';
       try {
         const res = await fetch('/api/portfolios/' + encodeURIComponent(name), { method: 'DELETE' });
-        if (!res.ok) throw new Error('Delete failed');
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error || `Delete failed (HTTP ${res.status})`);
+        }
         loadPortfolioList();
       } catch (e) {
         alert('Failed to delete: ' + e.message);
