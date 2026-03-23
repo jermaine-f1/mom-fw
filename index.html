@@ -348,6 +348,9 @@
           <!-- Summary stats -->
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="analyzer-summary"></div>
 
+          <!-- Risk Strip -->
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="analyzer-risk-strip"></div>
+
           <!-- Holdings table -->
           <div class="bg-slate-900/50 rounded-xl border border-slate-800 overflow-hidden">
             <div class="overflow-x-auto">
@@ -17857,6 +17860,44 @@
       ].map(c => `<div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4">
         <div class="text-xs text-slate-400 uppercase mb-1">${c.label}</div>
         <div class="text-xl font-bold text-${c.color}-400 mono">${c.value}</div>
+      </div>`).join('');
+
+      // Risk Strip
+      const wtdScore = totalValue > 0
+        ? holdings.reduce((s, h) => s + h.score * h.mktValue, 0) / totalValue
+        : 0;
+      const ma3Count = holdings.filter(h => h.instrument.aboveMA30 && h.instrument.aboveMA60 && h.instrument.aboveMA200).length;
+      const ma0Count = holdings.filter(h => !h.instrument.aboveMA30 && !h.instrument.aboveMA60 && !h.instrument.aboveMA200).length;
+      const sellCount = holdings.filter(h => !h.instrument.aboveMA30 && !h.instrument.aboveMA60 && !h.instrument.aboveMA200).length;
+      // Buy candidates: top-ranked instruments not already held
+      const heldTickers = new Set(holdings.map(h => h.symbol));
+      const buyCount = rankedETFs.filter(e => e.isETF && !heldTickers.has(e.ticker) && e.score >= 60 && e.aboveMA30 && e.aboveMA60 && e.aboveMA200).length;
+      // Violations: >30% of portfolio value in any single country or sector
+      const MAX_CLASS_PCT = 30;
+      const countryWts = {};
+      const sectorWts = {};
+      holdings.forEach(h => {
+        const c = h.instrument.country || 'Unknown';
+        const s = h.instrument.sector || 'Unknown';
+        countryWts[c] = (countryWts[c] || 0) + h.mktValue;
+        sectorWts[s] = (sectorWts[s] || 0) + h.mktValue;
+      });
+      let violations = 0;
+      if (totalValue > 0) {
+        Object.values(countryWts).forEach(v => { if (v / totalValue * 100 > MAX_CLASS_PCT) violations++; });
+        Object.values(sectorWts).forEach(v => { if (v / totalValue * 100 > MAX_CLASS_PCT) violations++; });
+      }
+
+      document.getElementById('analyzer-risk-strip').innerHTML = [
+        { label: 'Wtd Score', value: wtdScore.toFixed(1), color: wtdScore >= 60 ? 'emerald' : wtdScore >= 40 ? 'amber' : 'red' },
+        { label: 'MA\u20053 Holdings', value: ma3Count, color: 'emerald' },
+        { label: 'MA\u20050 Holdings', value: ma0Count, color: 'red' },
+        { label: 'Sell Signals', value: sellCount, color: 'red' },
+        { label: 'Buy Candidates', value: buyCount, color: 'emerald' },
+        { label: 'Violations', value: violations, color: 'red' },
+      ].map(c => `<div class="bg-slate-900/50 rounded-xl border border-slate-800 p-4 text-center">
+        <div class="text-xs text-slate-400 uppercase mb-1">${c.label}</div>
+        <div class="text-2xl font-bold text-${c.color}-400 mono">${c.value}</div>
       </div>`).join('');
 
       // Holdings table
