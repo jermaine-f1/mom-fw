@@ -18,7 +18,7 @@
     <div class="mb-6">
       <h1 class="text-2xl md:text-3xl font-bold">📊 Momentum Portfolio Framework</h1>
       <p class="text-slate-400 text-sm">CIO Dashboard | Diversified Quality Momentum Screener</p>
-      <p class="text-emerald-400 text-xs mono mt-1">Live Data Generated: 2026-03-22 23:42 ET</p>
+      <p class="text-emerald-400 text-xs mono mt-1">Live Data Generated: 2026-03-22 23:52 ET</p>
     </div>
 
     <!-- Tabs -->
@@ -873,11 +873,11 @@
     ],
     "category": "ETF",
     "isETF": true,
-    "price": 85.34,
-    "return6m": -11.03,
+    "price": 85.22,
+    "return6m": -11.16,
     "sortino": 0.9,
     "weeksDown": 8,
-    "zScore": -2.66,
+    "zScore": -2.68,
     "slope": -0.055,
     "aboveMA30": false,
     "aboveMA60": false,
@@ -1159,11 +1159,11 @@
     ],
     "category": "ETF",
     "isETF": true,
-    "price": 31.76,
-    "return6m": 8.34,
-    "sortino": 0.98,
+    "price": 31.72,
+    "return6m": 8.2,
+    "sortino": 0.97,
     "weeksDown": 4,
-    "zScore": -0.4,
+    "zScore": -0.43,
     "slope": 0.136,
     "aboveMA30": false,
     "aboveMA60": false,
@@ -1227,7 +1227,7 @@
     "isETF": true,
     "price": 75.24,
     "return6m": 3.15,
-    "sortino": 1.46,
+    "sortino": 1.47,
     "weeksDown": 6,
     "zScore": -1.45,
     "slope": 0.075,
@@ -1439,11 +1439,11 @@
     ],
     "category": "Equities",
     "isETF": false,
-    "price": 501.0,
-    "return6m": -22.33,
-    "sortino": 0.52,
+    "price": 499.0,
+    "return6m": -22.64,
+    "sortino": 0.51,
     "weeksDown": 8,
-    "zScore": -2.59,
+    "zScore": -2.63,
     "slope": -0.18,
     "aboveMA30": false,
     "aboveMA60": false,
@@ -5379,7 +5379,7 @@
   "EWY-FELE": 0.35,
   "EWY-FTT.TO": 0.36,
   "EWY-EXPO": 0.15,
-  "EWY-PLOW": 0.24,
+  "EWY-PLOW": 0.25,
   "EWY-DCI": 0.33,
   "EWY-DE": 0.3,
   "EWY-CMT": 0.15,
@@ -9526,7 +9526,7 @@
   "0700.HK-FELE": 0.02,
   "0700.HK-FTT.TO": 0.04,
   "0700.HK-EXPO": -0.01,
-  "0700.HK-PLOW": -0.02,
+  "0700.HK-PLOW": -0.01,
   "0700.HK-DCI": 0.06,
   "0700.HK-DE": 0.08,
   "0700.HK-CMT": 0.02,
@@ -18064,24 +18064,12 @@
       }
     }
 
-    // ===================== PORTFOLIO ANALYZER =====================
-    function showAnalyzerLoading(show, detail) {
-      document.getElementById('analyzer-dropzone').classList.toggle('hidden', show);
-      document.getElementById('analyzer-loading').classList.toggle('hidden', !show);
-      if (detail) document.getElementById('analyzer-loading-detail').textContent = detail;
-    }
-
-    function handleAnalyzerFile(file) {
-      if (!file) return;
-      showAnalyzerLoading(true, 'Reading ' + file.name);
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        requestAnimationFrame(() => {
-          setTimeout(() => parseAnalyzerCSV(e.target.result), 50);
-        });
-      };
-      reader.readAsText(file);
-    }
+    // Render screener
+    function renderSignals() {
+      const topIdeasSet = new Set(rankedETFs.slice(0, settings.topCount).map(e => e.ticker));
+      const topInView = filteredETFs.filter(e => topIdeasSet.has(e.ticker)).length;
+      const avgScore = filteredETFs.length > 0 ? (filteredETFs.reduce((s, e) => s + e.score, 0) / filteredETFs.length).toFixed(1) : '—';
+      const aboveAllMA = filteredETFs.filter(e => e.maStatus === 3).length;
 
       document.getElementById('filter-count').textContent = filteredETFs.length;
       document.getElementById('total-count').textContent = rankedETFs.length;
@@ -18174,29 +18162,26 @@
         }
       }
 
-      document.getElementById('analyzer-loading-detail').textContent = 'Scoring ' + holdings.length + ' holdings…';
-      renderAnalyzer(holdings, unrecognized);
-    }
-
-    function renderAnalyzer(holdings, unrecognized) {
-      // Show/hide unrecognized banner
-      const banner = document.getElementById('analyzer-unrecognized');
-      if (unrecognized.length > 0) {
-        banner.classList.remove('hidden');
-        document.getElementById('analyzer-unrecognized-list').textContent = ' ' + unrecognized.join(', ');
-      } else {
-        banner.classList.add('hidden');
+      if (portfolio.length === 0) {
+        document.getElementById('portfolio-stats').innerHTML = '<div class="col-span-full text-center text-slate-500">No positions match criteria. Try adjusting filters.</div>';
+        document.getElementById('portfolio-holdings').innerHTML = '';
+        document.getElementById('excluded-list').innerHTML = '';
+        return;
       }
 
-      // Calculate scores for instruments
-      holdings.forEach(h => {
-        const scored = calculateScore(h.instrument);
-        h.instrument = scored;
-        h.score = scored.score;
-        h.mktValue = h.shares * h.instrument.price;
-        h.pnl = h.shares * (h.instrument.price - h.costBasis);
-        h.pnlPct = h.costBasis > 0 ? ((h.instrument.price - h.costBasis) / h.costBasis * 100) : 0;
-      });
+      const weight = (100 / portfolio.length).toFixed(1);
+      const avgRet = portfolio.reduce((s, e) => s + e.return6m, 0) / portfolio.length;
+      const avgScore = portfolio.reduce((s, e) => s + e.score, 0) / portfolio.length;
+      let totalCorr = 0, corrCount = 0;
+      for (let i = 0; i < portfolio.length; i++) {
+        for (let j = i + 1; j < portfolio.length; j++) {
+          totalCorr += getCorrelation(portfolio[i].ticker, portfolio[j].ticker);
+          corrCount++;
+        }
+      }
+      const avgCorr = corrCount > 0 ? totalCorr / corrCount : 0;
+      const countries = new Set(portfolio.map(e => e.country)).size;
+      const sectors = new Set(portfolio.map(e => e.sector)).size;
 
       document.getElementById('portfolio-stats').innerHTML = `
         <div class="bg-slate-800 rounded-lg p-3 text-center">
@@ -18286,8 +18271,10 @@
       settings.topCount = parseInt(document.getElementById('t-topcount').value);
       settings.zScoreSteep = parseFloat(document.getElementById('t-zscore-steep').value);
 
-      showAnalyzerLoading(false);
-      document.getElementById('analyzer-results').classList.remove('hidden');
+      document.getElementById('t-topcount-val').textContent = settings.topCount;
+      document.getElementById('t-zscore-steep-val').textContent = settings.zScoreSteep.toFixed(1);
+      
+      updateConfigSummary();
     }
 
     function updateConfigSummary() {
@@ -18657,11 +18644,21 @@
 
     // ========== PORTFOLIO ANALYZER ==========
 
+    function showAnalyzerLoading(show, detail) {
+      document.getElementById('analyzer-dropzone').classList.toggle('hidden', show);
+      document.getElementById('analyzer-loading').classList.toggle('hidden', !show);
+      if (detail) document.getElementById('analyzer-loading-detail').textContent = detail;
+    }
+
     function handleAnalyzerFile(file) {
       if (!file) return;
+      showAnalyzerLoading(true, 'Reading ' + file.name);
       const reader = new FileReader();
       reader.onload = function(e) {
-        parseAnalyzerCSV(e.target.result);
+        // Defer to let the loading UI paint
+        requestAnimationFrame(() => {
+          setTimeout(() => parseAnalyzerCSV(e.target.result), 50);
+        });
       };
       reader.readAsText(file);
     }
@@ -18700,6 +18697,7 @@
         holdings.push({ symbol: sym, shares, costBasis, instrument });
       }
 
+      document.getElementById('analyzer-loading-detail').textContent = 'Scoring ' + holdings.length + ' holdings…';
       renderAnalyzer(holdings, unrecognized);
     }
 
@@ -18713,7 +18711,9 @@
       }
 
       holdings.forEach(h => {
-        h.score = calculateScore(h.instrument);
+        const scored = calculateScore(h.instrument);
+        h.instrument = scored;
+        h.score = scored.score;
         h.mktValue = h.shares * h.instrument.price;
         h.pnl = h.shares * (h.instrument.price - h.costBasis);
         h.pnlPct = h.costBasis > 0 ? ((h.instrument.price - h.costBasis) / h.costBasis * 100) : 0;
@@ -18812,6 +18812,7 @@
       // Sell/Reduce + Buy Candidates
       renderAnalyzerActions(holdings, totalValue);
 
+      showAnalyzerLoading(false);
       document.getElementById('analyzer-results').classList.remove('hidden');
     }
 
