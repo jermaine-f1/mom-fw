@@ -409,6 +409,13 @@
 
           </div>
 
+          <!-- Pairwise Correlation Check -->
+          <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-5">
+            <h3 class="font-bold text-slate-200 text-sm uppercase tracking-wide mb-1">🔗 Pairwise Correlation Check</h3>
+            <div class="text-xs text-slate-500 mb-4">Red flags where correlation &gt; 0.70 — overlapping exposures reduce diversification benefit.</div>
+            <div class="overflow-x-auto" id="analyzer-corr-matrix"></div>
+          </div>
+
           <!-- Score Distribution Panel -->
           <div class="bg-slate-900/50 rounded-xl border border-slate-800 p-5 space-y-4">
             <h3 class="font-bold text-slate-200 text-sm uppercase tracking-wide">Score Distribution</h3>
@@ -19065,6 +19072,9 @@
       // Diversification Map Card
       renderDiversificationMap(holdings, totalValue);
 
+      // Pairwise Correlation Check
+      renderCorrelationMatrix(holdings);
+
       // Score Distribution Panel
       renderAnalyzerDistribution(holdings, totalValue);
 
@@ -19295,6 +19305,37 @@
 
       document.getElementById('analyzer-div-region').innerHTML = buildPills(regionWts);
       document.getElementById('analyzer-div-sector').innerHTML = buildPills(sectorWts);
+    }
+
+    function renderCorrelationMatrix(holdings) {
+      const tickers = holdings.map(h => h.symbol);
+      if (tickers.length < 2) {
+        document.getElementById('analyzer-corr-matrix').innerHTML = '<div class="text-slate-500 text-sm">Need at least 2 holdings for correlation matrix.</div>';
+        return;
+      }
+
+      const CORR_THRESHOLD = 0.70;
+      let html = '<table class="text-sm"><thead><tr><th class="p-2"></th>';
+      tickers.forEach(t => { html += `<th class="p-2 text-center text-slate-400 mono font-medium">${t}</th>`; });
+      html += '</tr></thead><tbody>';
+
+      tickers.forEach((t1, i) => {
+        html += `<tr><td class="p-2 text-white mono font-medium">${t1}</td>`;
+        tickers.forEach((t2, j) => {
+          if (i === j) {
+            html += '<td class="p-2 text-center text-slate-600 mono">—</td>';
+          } else {
+            const corr = getCorrelation(t1, t2);
+            const isHigh = corr > CORR_THRESHOLD;
+            const cellClass = isHigh ? 'bg-amber-900/50 text-amber-300 font-bold' : 'text-slate-300';
+            html += `<td class="p-2 text-center mono ${cellClass}">${corr.toFixed(2)}</td>`;
+          }
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      document.getElementById('analyzer-corr-matrix').innerHTML = html;
     }
 
     function renderAnalyzerDistribution(holdings, totalValue) {
