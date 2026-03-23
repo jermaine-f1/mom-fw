@@ -371,6 +371,9 @@ def generate_html(etf_data, correlations, generation_date):
                   <th class="px-3 py-2 text-left cursor-pointer hover:text-white select-none" onclick="sortTable('country')">
                     Region <span id="sort-country" class="text-indigo-400"></span>
                   </th>
+                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('price')">
+                    Price <span id="sort-price" class="text-indigo-400"></span>
+                  </th>
                   <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('score')">
                     Score <span id="sort-score" class="text-indigo-400"></span>
                   </th>
@@ -867,7 +870,7 @@ def generate_html(etf_data, correlations, generation_date):
         currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
       }} else {{
         currentSort.column = column;
-        const numericColumns = ['score', 'return6m', 'sortino', 'weeksDown', 'zScore', 'maStatus'];
+        const numericColumns = ['price', 'score', 'return6m', 'sortino', 'weeksDown', 'zScore', 'maStatus'];
         currentSort.direction = numericColumns.includes(column) ? 'desc' : 'asc';
       }}
       
@@ -972,6 +975,7 @@ def generate_html(etf_data, correlations, generation_date):
             </td>
             <td class="px-3 py-2 text-xs ${{typeColor}}">${{typeLabel}}</td>
             <td class="px-3 py-2 text-xs text-slate-400">${{etf.country}}</td>
+            <td class="px-3 py-2 text-right mono" style="color:#fbbf24">${{etf.price != null ? '$' + etf.price.toFixed(2) : '—'}}</td>
             <td class="px-3 py-2 text-right mono font-bold ${{scoreColor}}">${{etf.score.toFixed(1)}}</td>
             <td class="px-3 py-2 text-right mono ${{etf.return6m >= 0 ? 'text-emerald-400' : 'text-red-400'}}">
               ${{etf.return6m >= 0 ? '+' : ''}}${{etf.return6m.toFixed(1)}}%
