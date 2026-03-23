@@ -17927,7 +17927,9 @@
 
       // Calculate scores for instruments
       holdings.forEach(h => {
-        h.score = calculateScore(h.instrument);
+        const scored = calculateScore(h.instrument);
+        h.instrument = scored;
+        h.score = scored.score;
         h.mktValue = h.shares * h.instrument.price;
         h.pnl = h.shares * (h.instrument.price - h.costBasis);
         h.pnlPct = h.costBasis > 0 ? ((h.instrument.price - h.costBasis) / h.costBasis * 100) : 0;
