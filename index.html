@@ -19104,7 +19104,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, csvText: currentAnalyzerCSV || '', holdings: holdingsData }),
         });
-        if (!res.ok) throw new Error('Save failed');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `HTTP ${res.status}`);
+        }
         status.textContent = `Saved as "${name}"`;
         status.className = 'text-xs text-emerald-400';
         loadSavedPortfoliosList();

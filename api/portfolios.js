@@ -1,5 +1,18 @@
 import { list, put } from '@vercel/blob';
 
+function parseBody(req) {
+  return new Promise((resolve, reject) => {
+    if (req.body) return resolve(req.body);
+    let data = '';
+    req.on('data', chunk => { data += chunk; });
+    req.on('end', () => {
+      try { resolve(JSON.parse(data)); }
+      catch (e) { reject(new Error('Invalid JSON body')); }
+    });
+    req.on('error', reject);
+  });
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
@@ -19,7 +32,8 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      const { name, csvText, holdings } = req.body;
+      const body = await parseBody(req);
+      const { name, csvText, holdings } = body;
       if (!name || !holdings) {
         return res.status(400).json({ error: 'name and holdings are required' });
       }
