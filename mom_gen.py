@@ -1961,7 +1961,7 @@ def generate_html(etf_data, correlations, generation_date):
         maValues[ma] += h.mktValue;
       }});
 
-      const maColors = ['#7f1d1d', '#78350f', '#166534', '#065f46'];
+      const maColors = ['#7f1d1d', '#78350f', '#854d0e', '#065f46'];
       const maLabels = ['MA\u20050', 'MA\u20051', 'MA\u20052', 'MA\u20053'];
 
       const maOrder = [3, 2, 1, 0];
