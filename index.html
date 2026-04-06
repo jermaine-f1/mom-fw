@@ -331,10 +331,13 @@
              ondrop="event.preventDefault(); this.classList.remove('border-indigo-500','bg-indigo-500/5'); handleAnalyzerFile(event.dataTransfer.files[0]);">
           <div class="text-4xl mb-3">📂</div>
           <div class="text-slate-300 font-medium mb-1">Drop portfolio CSV · columns: Symbol, Shares, Cost Basis</div>
-          <div class="text-slate-500 text-sm mb-4">CSV will be parsed client-side — nothing leaves your browser</div>
+          <div class="text-slate-500 text-sm mb-4">Last uploaded portfolio is persisted and shown to all users</div>
           <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors" onclick="event.stopPropagation(); document.getElementById('analyzer-file-input').click();">Choose File</button>
           <input type="file" id="analyzer-file-input" accept=".csv" class="hidden" onchange="handleAnalyzerFile(this.files[0]);" />
         </div>
+
+        <!-- Last-loaded badge -->
+        <div id="analyzer-persist-badge" class="hidden text-xs text-slate-500 text-right -mt-4"></div>
 
         <!-- Processing state -->
         <div id="analyzer-loading" class="hidden border-2 border-indigo-500/30 rounded-xl p-10 text-center bg-indigo-500/5">
@@ -18062,6 +18065,11 @@
         const activeKey = activeCioTab ? activeCioTab.dataset.cioTab : 'overview';
         renderCioSubTab(activeKey);
       }
+
+      // Auto-load last persisted portfolio when opening analyzer tab
+      if (tabId === 'analyzer') {
+        loadPersistedAnalyzer();
+      }
     }
 
     // Render screener
@@ -18657,10 +18665,55 @@
       reader.onload = function(e) {
         // Defer to let the loading UI paint
         requestAnimationFrame(() => {
-          setTimeout(() => parseAnalyzerCSV(e.target.result), 50);
+          setTimeout(() => {
+            parseAnalyzerCSV(e.target.result);
+            persistAnalyzerPortfolio(e.target.result);
+            analyzerAutoLoaded = true;
+            const badge = document.getElementById('analyzer-persist-badge');
+            if (badge) {
+              const now = new Date();
+              badge.textContent = 'Last uploaded: ' + now.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+              badge.classList.remove('hidden');
+            }
+          }, 50);
         });
       };
       reader.readAsText(file);
+    }
+
+    function persistAnalyzerPortfolio(csvText) {
+      fetch('/api/portfolios', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: '__last_analyzer__', csvText, holdings: [] }),
+      }).catch(() => {});
+    }
+
+    let analyzerAutoLoaded = false;
+    function loadPersistedAnalyzer() {
+      if (analyzerAutoLoaded) return;
+      // Skip if results are already displayed
+      if (!document.getElementById('analyzer-results').classList.contains('hidden')) return;
+      analyzerAutoLoaded = true;
+      showAnalyzerLoading(true, 'Loading last portfolio…');
+      fetch('/api/portfolios?name=__last_analyzer__')
+        .then(r => { if (!r.ok) throw new Error('No saved portfolio'); return r.json(); })
+        .then(data => {
+          if (data.csvText) {
+            parseAnalyzerCSV(data.csvText);
+            const ts = data.savedAt ? new Date(data.savedAt) : null;
+            if (ts) {
+              const badge = document.getElementById('analyzer-persist-badge');
+              if (badge) {
+                badge.textContent = 'Last uploaded: ' + ts.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                badge.classList.remove('hidden');
+              }
+            }
+          } else {
+            showAnalyzerLoading(false);
+          }
+        })
+        .catch(() => { showAnalyzerLoading(false); analyzerAutoLoaded = false; });
     }
 
     function parseAnalyzerCSV(text) {
