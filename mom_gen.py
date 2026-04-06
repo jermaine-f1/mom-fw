@@ -2005,6 +2005,7 @@ def generate_html(etf_data, correlations, generation_date):
       const regions = {{}};
       holdings.forEach(h => {{
         const c = h.instrument.country || 'Unknown';
+        if (c === 'TAA ETFs') return;
         if (!regions[c]) regions[c] = {{ count: 0, value: 0, scores: [], ma: [0,0,0,0] }};
         const r = regions[c];
         r.count++;
