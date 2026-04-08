@@ -1889,14 +1889,39 @@ def generate_html(etf_data, correlations, generation_date):
         .catch(() => {{ showAnalyzerLoading(false); analyzerAutoLoaded = false; }});
     }}
 
+    function detectDelimiter(line) {{
+      return line.split('\\t').length > line.split(',').length ? '\\t' : ',';
+    }}
+
+    function splitLine(line, delim) {{
+      const cols = [];
+      let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {{
+        const ch = line[i];
+        if (ch === '"') {{ inQ = !inQ; }}
+        else if (ch === delim && !inQ) {{ cols.push(cur.trim()); cur = ''; }}
+        else {{ cur += ch; }}
+      }}
+      cols.push(cur.trim());
+      return cols;
+    }}
+
+    function cleanNum(val) {{
+      if (!val) return 0;
+      return parseFloat(val.replace(/[^0-9.\\-]/g, '')) || 0;
+    }}
+
     function parseAnalyzerCSV(text) {{
       const lines = text.trim().split(/\\r?\\n/);
       if (lines.length < 2) return;
 
-      const header = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+      const delim = detectDelimiter(lines[0]);
+      const header = splitLine(lines[0], delim).map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
       const symIdx = header.findIndex(h => h === 'symbol' || h === 'ticker' || h === 'sym');
-      const sharesIdx = header.findIndex(h => h === 'shares' || h === 'quantity' || h === 'qty');
-      const costIdx = header.findIndex(h => h.includes('cost') || h.includes('basis') || h === 'avgcost');
+      const sharesIdx = header.findIndex(h => h === 'shares' || h === 'quantity' || h === 'qty' || h === 'units' || h === 'position' || h === 'amount');
+      const costIdx = header.findIndex(h => h.includes('cost') || h.includes('basis') || h === 'avgcost' || h === 'avgprice');
+      const mktValIdx = header.findIndex(h => h === 'marketvalue' || h === 'mktval' || h === 'mktvalue' || (h.includes('market') && h.includes('val')));
+      const weightIdx = header.findIndex(h => h === 'weight' || h === 'wt' || h === 'allocation' || (h.includes('weight') || h.includes('alloc')));
 
       if (symIdx === -1) {{
         alert('CSV must contain a "Symbol" column');
@@ -1910,17 +1935,19 @@ def generate_html(etf_data, correlations, generation_date):
       const unrecognized = [];
 
       for (let i = 1; i < lines.length; i++) {{
-        const cols = lines[i].split(',').map(c => c.trim());
+        const cols = splitLine(lines[i], delim);
         if (!cols[symIdx]) continue;
-        const sym = cols[symIdx].toUpperCase();
-        const shares = sharesIdx !== -1 ? parseFloat(cols[sharesIdx]) || 0 : 0;
-        const costBasis = costIdx !== -1 ? parseFloat(cols[costIdx]) || 0 : 0;
+        const sym = cols[symIdx].toUpperCase().replace(/[^A-Z0-9.]/g, '');
+        const shares = sharesIdx !== -1 ? cleanNum(cols[sharesIdx]) : 0;
+        const costBasis = costIdx !== -1 ? cleanNum(cols[costIdx]) : 0;
+        const csvMktVal = mktValIdx !== -1 ? cleanNum(cols[mktValIdx]) : null;
+        const csvWeight = weightIdx !== -1 ? cleanNum(cols[weightIdx]) : null;
         const instrument = tickerMap[sym];
         if (!instrument) {{
           unrecognized.push(sym);
           continue;
         }}
-        holdings.push({{ symbol: sym, shares, costBasis, instrument }});
+        holdings.push({{ symbol: sym, shares, costBasis, csvMktVal, csvWeight, instrument }});
       }}
 
       document.getElementById('analyzer-loading-detail').textContent = 'Scoring ' + holdings.length + ' holdings…';
@@ -1940,7 +1967,11 @@ def generate_html(etf_data, correlations, generation_date):
         const scored = calculateScore(h.instrument);
         h.instrument = scored;
         h.score = scored.score;
-        h.mktValue = h.shares * h.instrument.price;
+        const computedMktVal = h.shares * h.instrument.price;
+        h.mktValue = computedMktVal > 0 ? computedMktVal : (h.csvMktVal || 0);
+        if (h.mktValue > 0 && h.shares === 0 && h.instrument.price > 0) {{
+          h.shares = h.mktValue / h.instrument.price;
+        }}
         h.pnl = h.shares * (h.instrument.price - h.costBasis);
         h.pnlPct = h.costBasis > 0 ? ((h.instrument.price - h.costBasis) / h.costBasis * 100) : 0;
       }});
