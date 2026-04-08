@@ -331,10 +331,13 @@
              ondrop="event.preventDefault(); this.classList.remove('border-indigo-500','bg-indigo-500/5'); handleAnalyzerFile(event.dataTransfer.files[0]);">
           <div class="text-4xl mb-3">📂</div>
           <div class="text-slate-300 font-medium mb-1">Drop portfolio CSV · columns: Symbol, Shares, Cost Basis</div>
-          <div class="text-slate-500 text-sm mb-4">CSV will be parsed client-side — nothing leaves your browser</div>
+          <div class="text-slate-500 text-sm mb-4">Last uploaded portfolio is persisted and shown to all users</div>
           <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors" onclick="event.stopPropagation(); document.getElementById('analyzer-file-input').click();">Choose File</button>
           <input type="file" id="analyzer-file-input" accept=".csv" class="hidden" onchange="handleAnalyzerFile(this.files[0]);" />
         </div>
+
+        <!-- Last-loaded badge -->
+        <div id="analyzer-persist-badge" class="hidden text-xs text-slate-500 text-right -mt-4"></div>
 
         <!-- Processing state -->
         <div id="analyzer-loading" class="hidden border-2 border-indigo-500/30 rounded-xl p-10 text-center bg-indigo-500/5">
@@ -636,6 +639,32 @@
             </div>
           </div>
         </div>
+
+        <!-- CIO Asset Class Constraints -->
+        <div class="bg-slate-900/80 border border-slate-700 rounded-xl p-5">
+          <h3 class="text-lg font-bold text-slate-200 mb-4">🔒 Asset Class Constraints — CIO Limits</h3>
+          <p class="text-xs text-slate-400 mb-4">Four asset classes: EM, DM, Commodities, Cash. Total must equal 100%.</p>
+
+          <!-- Stacked allocation bar -->
+          <div id="cio-alloc-bar" class="mb-4"></div>
+
+          <!-- Constraint rows -->
+          <div id="cio-constraint-rows" class="space-y-3"></div>
+
+          <!-- Summary footer -->
+          <div id="cio-constraint-footer" class="mt-4 text-center text-sm font-bold mono py-2 rounded-lg"></div>
+
+          <!-- Buttons -->
+          <div class="mt-4 flex gap-3">
+            <button onclick="saveCioConstraints()" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg font-bold transition-colors">
+              ✓ Save Constraints
+            </button>
+            <button onclick="resetCioConstraints()" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg font-medium transition-colors">
+              ↺ Reset Defaults
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -18062,6 +18091,11 @@
         const activeKey = activeCioTab ? activeCioTab.dataset.cioTab : 'overview';
         renderCioSubTab(activeKey);
       }
+
+      // Auto-load last persisted portfolio when opening analyzer tab
+      if (tabId === 'analyzer') {
+        loadPersistedAnalyzer();
+      }
     }
 
     // Render screener
@@ -18312,6 +18346,134 @@
       setMode('quality');
       applySettings();
     }
+
+    // ========== CIO ASSET CLASS CONSTRAINTS ==========
+
+    const CIO_CONSTRAINT_DEFAULTS = [
+      { id: 'em',          name: 'EM',          color: '#10b981', current: 31.4, min: 0,  max: 30 },
+      { id: 'dm',          name: 'DM',          color: '#818cf8', current: 18.1, min: 0,  max: 30 },
+      { id: 'commodities', name: 'Commodities', color: '#f59e0b', current: 25.3, min: 0,  max: 35 },
+      { id: 'cash',        name: 'Cash',        color: '#22d3ee', current: 25.2, min: 5,  max: 40 },
+    ];
+
+    let cioConstraints = JSON.parse(JSON.stringify(CIO_CONSTRAINT_DEFAULTS));
+
+    function renderCioConstraints() {
+      const total = cioConstraints.reduce((s, c) => s + c.current, 0);
+
+      // Stacked allocation bar
+      const barSegments = cioConstraints.map(c => {
+        const pct = (c.current / total * 100);
+        return `<div style="width:${pct}%;background:${c.color}" class="h-6 relative group">
+          <span class="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white drop-shadow">${c.current >= 8 ? c.name + ' ' + c.current.toFixed(1) + '%' : ''}</span>
+        </div>`;
+      }).join('');
+      const legend = cioConstraints.map(c =>
+        `<span class="flex items-center gap-1.5 text-xs text-slate-300"><span class="w-3 h-3 rounded-sm inline-block" style="background:${c.color}"></span>${c.name} ${c.current.toFixed(1)}%</span>`
+      ).join('');
+      document.getElementById('cio-alloc-bar').innerHTML =
+        `<div class="flex rounded-lg overflow-hidden border border-slate-700">${barSegments}</div>
+         <div class="flex gap-4 mt-2 justify-center">${legend}</div>`;
+
+      // Constraint rows
+      const rowsHtml = cioConstraints.map((c, i) => {
+        const overMax = c.current > c.max;
+        const underMin = c.min > 0 && c.current < c.min;
+        const ok = !overMax && !underMin;
+
+        let statusBadge, bgClass, borderClass;
+        if (overMax) {
+          const diff = (c.current - c.max).toFixed(1);
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-red-900/60 text-red-300">↑ ${diff}% over max</span>`;
+          bgClass = 'background:#1a0505';
+          borderClass = 'border-color:#7f1d1d';
+        } else if (underMin) {
+          const diff = (c.min - c.current).toFixed(1);
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-900/60 text-amber-300">↓ ${diff}% below min</span>`;
+          bgClass = 'background:#1c1200';
+          borderClass = 'border-color:#78350f';
+        } else {
+          statusBadge = `<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-900/60 text-emerald-300">✓ Within range</span>`;
+          bgClass = 'background:#0f172a';
+          borderClass = 'border-color:#1e293b';
+        }
+
+        const fillColor = overMax ? '#dc2626' : underMin ? '#d97706' : c.color;
+        const fillWidth = Math.min(c.current, 100);
+
+        return `<div class="rounded-lg border p-3" style="${bgClass};${borderClass}">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="font-bold text-sm text-white flex items-center gap-2">
+              <span class="w-3 h-3 rounded-sm inline-block" style="background:${c.color}"></span>${c.name}
+            </span>
+            <span class="mono text-sm" style="color:${c.color}">Current ${c.current.toFixed(1)}%</span>
+            <span class="flex items-center gap-2 text-xs">
+              <label class="text-slate-400">Min%</label>
+              <input type="number" min="0" max="100" value="${c.min}" data-idx="${i}" data-field="min"
+                class="cio-input w-16 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs mono text-white text-center">
+            </span>
+            <span class="flex items-center gap-2 text-xs">
+              <label class="text-slate-400">Max%</label>
+              <input type="number" min="0" max="100" value="${c.max}" data-idx="${i}" data-field="max"
+                class="cio-input w-16 bg-slate-800 border border-slate-600 rounded px-2 py-1 text-xs mono text-white text-center">
+            </span>
+            ${statusBadge}
+          </div>
+          <div class="relative h-5 bg-slate-800 rounded-full overflow-visible">
+            <div class="absolute top-0 left-0 h-full rounded-full" style="width:${fillWidth}%;background:${fillColor};"></div>
+            ${c.min > 0 ? `<div class="absolute top-0 h-full w-0.5" style="left:${c.min}%;background:#d97706;z-index:2" title="Min ${c.min}%"></div>` : ''}
+            <div class="absolute top-0 h-full w-0.5" style="left:${Math.min(c.max, 100)}%;background:#dc2626;z-index:2" title="Max ${c.max}%"></div>
+          </div>
+          <div class="flex justify-between text-[10px] text-slate-500 mt-1 px-0.5">
+            <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+          </div>
+        </div>`;
+      }).join('');
+      document.getElementById('cio-constraint-rows').innerHTML = rowsHtml;
+
+      // Footer
+      const totalRounded = parseFloat(total.toFixed(1));
+      const balanced = Math.abs(totalRounded - 100) < 0.01;
+      document.getElementById('cio-constraint-footer').innerHTML = balanced
+        ? `<span class="text-emerald-400">Total: ${totalRounded}% ✓ Balanced</span>`
+        : `<span class="text-red-400">Total: ${totalRounded}% ≠ 100%</span>`;
+      document.getElementById('cio-constraint-footer').className =
+        `mt-4 text-center text-sm font-bold mono py-2 rounded-lg ${balanced ? 'bg-emerald-900/30 border border-emerald-700/50' : 'bg-red-900/30 border border-red-700/50'}`;
+
+      // Re-bind input listeners
+      document.querySelectorAll('.cio-input').forEach(inp => {
+        inp.addEventListener('input', function() {
+          const idx = parseInt(this.dataset.idx);
+          const field = this.dataset.field;
+          const val = parseFloat(this.value);
+          if (!isNaN(val) && val >= 0 && val <= 100) {
+            cioConstraints[idx][field] = val;
+            renderCioConstraints();
+          }
+        });
+      });
+    }
+
+    function saveCioConstraints() {
+      try {
+        localStorage.setItem('cioConstraints', JSON.stringify(cioConstraints));
+      } catch(e) {}
+      renderCioConstraints();
+    }
+
+    function resetCioConstraints() {
+      cioConstraints = JSON.parse(JSON.stringify(CIO_CONSTRAINT_DEFAULTS));
+      try {
+        localStorage.removeItem('cioConstraints');
+      } catch(e) {}
+      renderCioConstraints();
+    }
+
+    // Load saved constraints on startup
+    try {
+      const saved = localStorage.getItem('cioConstraints');
+      if (saved) cioConstraints = JSON.parse(saved);
+    } catch(e) {}
 
     // ========== CIO SIGNALS DASHBOARD ==========
 
@@ -18657,10 +18819,55 @@
       reader.onload = function(e) {
         // Defer to let the loading UI paint
         requestAnimationFrame(() => {
-          setTimeout(() => parseAnalyzerCSV(e.target.result), 50);
+          setTimeout(() => {
+            parseAnalyzerCSV(e.target.result);
+            persistAnalyzerPortfolio(e.target.result);
+            analyzerAutoLoaded = true;
+            const badge = document.getElementById('analyzer-persist-badge');
+            if (badge) {
+              const now = new Date();
+              badge.textContent = 'Last uploaded: ' + now.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+              badge.classList.remove('hidden');
+            }
+          }, 50);
         });
       };
       reader.readAsText(file);
+    }
+
+    function persistAnalyzerPortfolio(csvText) {
+      fetch('/api/portfolios', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: '__last_analyzer__', csvText, holdings: [] }),
+      }).catch(() => {});
+    }
+
+    let analyzerAutoLoaded = false;
+    function loadPersistedAnalyzer() {
+      if (analyzerAutoLoaded) return;
+      // Skip if results are already displayed
+      if (!document.getElementById('analyzer-results').classList.contains('hidden')) return;
+      analyzerAutoLoaded = true;
+      showAnalyzerLoading(true, 'Loading last portfolio…');
+      fetch('/api/portfolios?name=__last_analyzer__')
+        .then(r => { if (!r.ok) throw new Error('No saved portfolio'); return r.json(); })
+        .then(data => {
+          if (data.csvText) {
+            parseAnalyzerCSV(data.csvText);
+            const ts = data.savedAt ? new Date(data.savedAt) : null;
+            if (ts) {
+              const badge = document.getElementById('analyzer-persist-badge');
+              if (badge) {
+                badge.textContent = 'Last uploaded: ' + ts.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                badge.classList.remove('hidden');
+              }
+            }
+          } else {
+            showAnalyzerLoading(false);
+          }
+        })
+        .catch(() => { showAnalyzerLoading(false); analyzerAutoLoaded = false; });
     }
 
     function parseAnalyzerCSV(text) {
@@ -19018,6 +19225,7 @@
     applyFilters();
     updateConfigSummary();
     renderCioSubTab('overview');
+    renderCioConstraints();
   </script>
 </body>
 </html>
