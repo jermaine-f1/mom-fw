@@ -631,14 +631,14 @@ def generate_html(etf_data, correlations, generation_date):
               <table class="w-full text-sm">
                 <thead>
                   <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase">
-                    <th class="text-left p-2">Region</th>
-                    <th class="text-right p-2">Positions</th>
-                    <th class="text-right p-2">Wt%</th>
-                    <th class="text-right p-2">MA=3</th>
-                    <th class="text-right p-2">MA=2</th>
-                    <th class="text-right p-2">MA=1</th>
-                    <th class="text-right p-2">MA=0</th>
-                    <th class="text-right p-2">Avg Score</th>
+                    <th class="text-left p-2 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('region','name')">Region <span id="az-sort-region-name"></span></th>
+                    <th class="text-right p-2 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('region','count')">Positions <span id="az-sort-region-count"></span></th>
+                    <th class="text-right p-2 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('region','wt')">Wt% <span id="az-sort-region-wt"></span></th>
+                    <th class="text-right p-2 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('region','ma3')">MA=3 <span id="az-sort-region-ma3"></span></th>
+                    <th class="text-right p-2 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('region','ma2')">MA=2 <span id="az-sort-region-ma2"></span></th>
+                    <th class="text-right p-2 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('region','ma1')">MA=1 <span id="az-sort-region-ma1"></span></th>
+                    <th class="text-right p-2 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('region','ma0')">MA=0 <span id="az-sort-region-ma0"></span></th>
+                    <th class="text-right p-2 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('region','avg')">Avg Score <span id="az-sort-region-avg"></span></th>
                   </tr>
                 </thead>
                 <tbody id="analyzer-region-table"></tbody>
@@ -652,23 +652,23 @@ def generate_html(etf_data, correlations, generation_date):
               <table class="w-full text-sm">
                 <thead>
                   <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase">
-                    <th class="text-left p-3">Symbol</th>
-                    <th class="text-center p-3">MA Signal</th>
-                    <th class="text-center p-3">MA30</th>
-                    <th class="text-center p-3">MA60</th>
-                    <th class="text-center p-3">MA200</th>
-                    <th class="text-right p-3">Score</th>
-                    <th class="text-right p-3">Price</th>
-                    <th class="text-right p-3">Mkt Val</th>
-                    <th class="text-right p-3">Wt%</th>
-                    <th class="text-left p-3">Region</th>
+                    <th class="text-left p-3 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('holdings','symbol')">Symbol <span id="az-sort-holdings-symbol"></span></th>
+                    <th class="text-center p-3 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('holdings','maStatus')">MA Signal <span id="az-sort-holdings-maStatus"></span></th>
+                    <th class="text-center p-3 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('holdings','ma30')">MA30 <span id="az-sort-holdings-ma30"></span></th>
+                    <th class="text-center p-3 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('holdings','ma60')">MA60 <span id="az-sort-holdings-ma60"></span></th>
+                    <th class="text-center p-3 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('holdings','ma200')">MA200 <span id="az-sort-holdings-ma200"></span></th>
+                    <th class="text-right p-3 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('holdings','score')">Score <span id="az-sort-holdings-score"></span></th>
+                    <th class="text-right p-3 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('holdings','price')">Price <span id="az-sort-holdings-price"></span></th>
+                    <th class="text-right p-3 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('holdings','mktValue')">Mkt Val <span id="az-sort-holdings-mktValue"></span></th>
+                    <th class="text-right p-3 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('holdings','weight')">Wt% <span id="az-sort-holdings-weight"></span></th>
+                    <th class="text-left p-3 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('holdings','region')">Region <span id="az-sort-holdings-region"></span></th>
                   </tr>
                 </thead>
                 <tbody id="analyzer-table"></tbody>
               </table>
             </div>
             <div class="px-4 py-2.5 border-t border-slate-800 text-xs text-slate-500">
-              Red = MA=0 (exit) · Amber = MA=1 (watch) · Sorted MA desc then Score desc
+              Red = MA=0 (exit) · Amber = MA=1 (watch) · Click column headers to sort
             </div>
           </div>
 
@@ -684,11 +684,11 @@ def generate_html(etf_data, correlations, generation_date):
                 <table class="w-full text-sm">
                   <thead>
                     <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase">
-                      <th class="text-left p-2.5">Symbol</th>
-                      <th class="text-center p-2.5">MA</th>
-                      <th class="text-right p-2.5">Score</th>
-                      <th class="text-left p-2.5">Reason</th>
-                      <th class="text-center p-2.5">Action</th>
+                      <th class="text-left p-2.5 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('sell','symbol')">Symbol <span id="az-sort-sell-symbol"></span></th>
+                      <th class="text-center p-2.5 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('sell','ma')">MA <span id="az-sort-sell-ma"></span></th>
+                      <th class="text-right p-2.5 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('sell','score')">Score <span id="az-sort-sell-score"></span></th>
+                      <th class="text-left p-2.5 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('sell','reason')">Reason <span id="az-sort-sell-reason"></span></th>
+                      <th class="text-center p-2.5 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('sell','action')">Action <span id="az-sort-sell-action"></span></th>
                     </tr>
                   </thead>
                   <tbody id="analyzer-sell-table"></tbody>
@@ -706,9 +706,9 @@ def generate_html(etf_data, correlations, generation_date):
                 <table class="w-full text-sm">
                   <thead>
                     <tr class="border-b border-slate-700 text-slate-400 text-xs uppercase">
-                      <th class="text-left p-2.5">Symbol</th>
-                      <th class="text-center p-2.5">MA</th>
-                      <th class="text-right p-2.5">Score</th>
+                      <th class="text-left p-2.5 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('buy','symbol')">Symbol <span id="az-sort-buy-symbol"></span></th>
+                      <th class="text-center p-2.5 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('buy','ma')">MA <span id="az-sort-buy-ma"></span></th>
+                      <th class="text-right p-2.5 cursor-pointer hover:text-white select-none" onclick="sortAnalyzerColumn('buy','score')">Score <span id="az-sort-buy-score"></span></th>
                       <th class="text-left p-2.5">Why Buy</th>
                     </tr>
                   </thead>
@@ -976,6 +976,19 @@ def generate_html(etf_data, correlations, generation_date):
     let rankedETFs = etfUniverse.map(calculateScore).sort((a, b) => b.score - a.score);
     let filteredETFs = rankedETFs;
     let currentSort = {{ column: 'score', direction: 'desc' }};
+
+    // Analyzer sort state & data stores
+    const analyzerSort = {{
+      holdings: {{ column: 'maStatus', direction: 'desc' }},
+      region: {{ column: 'wt', direction: 'desc' }},
+      sell: {{ column: 'ma', direction: 'asc' }},
+      buy: {{ column: 'score', direction: 'desc' }},
+    }};
+    let analyzerHoldings = [];
+    let analyzerTotalValue = 0;
+    let analyzerSellRows = [];
+    let analyzerBuyCandidates = [];
+    let analyzerRegionData = [];
 
     // Initialize filter dropdowns
     function initFilterDropdowns() {{
@@ -2031,23 +2044,39 @@ def generate_html(etf_data, correlations, generation_date):
       // Score Distribution Panel
       renderAnalyzerDistribution(holdings, totalValue);
 
-      // Holdings table — sort MA desc, Score desc
+      // Holdings table — compute maStatus, store globally, render
       holdings.forEach(h => {{
         h.maStatus = (h.instrument.aboveMA30 ? 1 : 0) + (h.instrument.aboveMA60 ? 1 : 0) + (h.instrument.aboveMA200 ? 1 : 0);
+        h.weight = totalValue > 0 ? (h.mktValue / totalValue * 100) : 0;
       }});
       holdings.sort((a, b) => b.maStatus - a.maStatus || b.score - a.score);
+      analyzerHoldings = holdings;
+      analyzerTotalValue = totalValue;
+      analyzerSort.holdings = {{ column: 'maStatus', direction: 'desc' }};
+      renderAnalyzerHoldingsTable();
 
-      const maDot = (above) => above
-        ? '<span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>'
-        : '<span class="inline-block w-3 h-3 rounded-full border border-slate-600"></span>';
+      // Sell/Reduce + Buy Candidates
+      renderAnalyzerActions(holdings, totalValue);
 
-      const maPillColors = {{
-        3: 'bg-emerald-900 text-emerald-300',
-        2: 'bg-emerald-800/60 text-emerald-400',
-        1: 'bg-amber-900/60 text-amber-300',
-        0: 'bg-red-900/60 text-red-300',
-      }};
+      showAnalyzerLoading(false);
+      document.getElementById('analyzer-results').classList.remove('hidden');
+    }}
 
+    // ---- Analyzer table rendering functions ----
+    const maDot = (above) => above
+      ? '<span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>'
+      : '<span class="inline-block w-3 h-3 rounded-full border border-slate-600"></span>';
+
+    const maPillColors = {{
+      3: 'bg-emerald-900 text-emerald-300',
+      2: 'bg-emerald-800/60 text-emerald-400',
+      1: 'bg-amber-900/60 text-amber-300',
+      0: 'bg-red-900/60 text-red-300',
+    }};
+
+    function renderAnalyzerHoldingsTable() {{
+      const holdings = analyzerHoldings;
+      const totalValue = analyzerTotalValue;
       document.getElementById('analyzer-table').innerHTML = holdings.map(h => {{
         const weight = totalValue > 0 ? (h.mktValue / totalValue * 100) : 0;
         const scoreColor = h.score >= 60 ? 'text-emerald-400' : h.score >= 40 ? 'text-amber-400' : 'text-red-400';
@@ -2065,12 +2094,184 @@ def generate_html(etf_data, correlations, generation_date):
           <td class="p-3 text-slate-400 text-xs">${{h.instrument.country || '\u2014'}}</td>
         </tr>`;
       }}).join('');
+      updateAnalyzerSortIndicators('holdings');
+    }}
 
-      // Sell/Reduce + Buy Candidates
-      renderAnalyzerActions(holdings, totalValue);
+    function renderAnalyzerSellTable() {{
+      const sellTable = document.getElementById('analyzer-sell-table');
+      const sellEmpty = document.getElementById('analyzer-sell-empty');
+      if (analyzerSellRows.length === 0) {{
+        sellTable.innerHTML = '';
+        sellEmpty.classList.remove('hidden');
+      }} else {{
+        sellEmpty.classList.add('hidden');
+        const maPill = (ma) => {{
+          const colors = {{ 0: 'bg-red-900/60 text-red-300', 1: 'bg-amber-900/60 text-amber-300', 2: 'bg-emerald-800/60 text-emerald-400', 3: 'bg-emerald-900 text-emerald-300' }};
+          return `<span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${{colors[ma]}}">${{ma}}/3</span>`;
+        }};
+        sellTable.innerHTML = analyzerSellRows.map(r => {{
+          const scoreColor = r.score >= 60 ? 'text-emerald-400' : r.score >= 40 ? 'text-amber-400' : 'text-red-400';
+          const actionBadge = r.action === 'Exit'
+            ? '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-red-900/60 text-red-300">Exit</span>'
+            : '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-900/60 text-amber-300">Reduce</span>';
+          return `<tr class="border-b border-slate-800">
+            <td class="p-2.5 font-medium text-white mono">${{r.symbol}}</td>
+            <td class="p-2.5 text-center">${{maPill(r.ma)}}</td>
+            <td class="p-2.5 text-right mono ${{scoreColor}}">${{r.score.toFixed(0)}}</td>
+            <td class="p-2.5 text-xs text-slate-400">${{r.reason}}</td>
+            <td class="p-2.5 text-center">${{actionBadge}}</td>
+          </tr>`;
+        }}).join('');
+      }}
+      updateAnalyzerSortIndicators('sell');
+    }}
 
-      showAnalyzerLoading(false);
-      document.getElementById('analyzer-results').classList.remove('hidden');
+    function renderAnalyzerBuyTable() {{
+      const buyTable = document.getElementById('analyzer-buy-table');
+      const buyEmpty = document.getElementById('analyzer-buy-empty');
+      if (analyzerBuyCandidates.length === 0) {{
+        buyTable.innerHTML = '';
+        buyEmpty.classList.remove('hidden');
+      }} else {{
+        buyEmpty.classList.add('hidden');
+        const totalValue = analyzerTotalValue;
+        const countryWts = {{}};
+        analyzerHoldings.forEach(h => {{
+          const c = h.instrument.country || 'Unknown';
+          countryWts[c] = (countryWts[c] || 0) + h.mktValue;
+        }});
+        buyTable.innerHTML = analyzerBuyCandidates.map(e => {{
+          const ma = (e.aboveMA30 ? 1 : 0) + (e.aboveMA60 ? 1 : 0) + (e.aboveMA200 ? 1 : 0);
+          const bPillColors = {{ 3: 'bg-emerald-900 text-emerald-300', 2: 'bg-emerald-800/60 text-emerald-400' }};
+          const scoreColor = e.score >= 60 ? 'text-emerald-400' : 'text-amber-400';
+          const c = e.country || 'Unknown';
+          const currentPct = totalValue > 0 ? ((countryWts[c] || 0) / totalValue * 100) : 0;
+          const maxPct = getAssetClassMaxPct(c);
+          const headroom = (maxPct - currentPct).toFixed(0);
+          const whyParts = [];
+          whyParts.push(`Score ${{e.score.toFixed(0)}}`);
+          whyParts.push(`MA=${{ma}}/3`);
+          whyParts.push(`${{c}} has ${{headroom}}% headroom`);
+          if (e.return6m > 10) whyParts.push(`+${{e.return6m.toFixed(0)}}% 6M`);
+          return `<tr class="border-b border-slate-800">
+            <td class="p-2.5 font-medium text-white mono">${{e.ticker}}</td>
+            <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${{bPillColors[ma]}}">${{ma}}/3</span></td>
+            <td class="p-2.5 text-right mono ${{scoreColor}}">${{e.score.toFixed(0)}}</td>
+            <td class="p-2.5 text-xs text-slate-400">${{whyParts.join(' \u00b7 ')}}</td>
+          </tr>`;
+        }}).join('');
+      }}
+      updateAnalyzerSortIndicators('buy');
+    }}
+
+    function renderAnalyzerRegionTableRows() {{
+      document.getElementById('analyzer-region-table').innerHTML = analyzerRegionData.map(([name, r]) => {{
+        const totalValue = analyzerTotalValue;
+        const wt = totalValue > 0 ? (r.value / totalValue * 100) : 0;
+        const avg = r.scores.reduce((s, v) => s + v, 0) / r.scores.length;
+        const avgColor = avg >= 60 ? 'text-emerald-400' : avg >= 40 ? 'text-amber-400' : 'text-red-400';
+        return `<tr class="border-b border-slate-800">
+          <td class="p-2 text-white font-medium">${{name}}</td>
+          <td class="p-2 text-right mono text-slate-300">${{r.count}}</td>
+          <td class="p-2 text-right mono text-slate-300">${{wt.toFixed(1)}}%</td>
+          <td class="p-2 text-right mono text-emerald-400">${{r.ma[3]}}</td>
+          <td class="p-2 text-right mono text-emerald-400">${{r.ma[2]}}</td>
+          <td class="p-2 text-right mono text-amber-400">${{r.ma[1]}}</td>
+          <td class="p-2 text-right mono text-red-400">${{r.ma[0]}}</td>
+          <td class="p-2 text-right mono ${{avgColor}}">${{avg.toFixed(0)}}</td>
+        </tr>`;
+      }}).join('');
+      updateAnalyzerSortIndicators('region');
+    }}
+
+    // ---- Analyzer sort logic ----
+    function getAnalyzerSortValue(tableKey, item, column) {{
+      if (tableKey === 'holdings') {{
+        switch(column) {{
+          case 'symbol': return item.symbol.toLowerCase();
+          case 'maStatus': return item.maStatus;
+          case 'ma30': return item.instrument.aboveMA30 ? 1 : 0;
+          case 'ma60': return item.instrument.aboveMA60 ? 1 : 0;
+          case 'ma200': return item.instrument.aboveMA200 ? 1 : 0;
+          case 'score': return item.score;
+          case 'price': return item.instrument.price;
+          case 'mktValue': return item.mktValue;
+          case 'weight': return item.weight;
+          case 'region': return (item.instrument.country || '').toLowerCase();
+        }}
+      }} else if (tableKey === 'region') {{
+        const [name, r] = item;
+        switch(column) {{
+          case 'name': return name.toLowerCase();
+          case 'count': return r.count;
+          case 'wt': return r.value;
+          case 'ma3': return r.ma[3];
+          case 'ma2': return r.ma[2];
+          case 'ma1': return r.ma[1];
+          case 'ma0': return r.ma[0];
+          case 'avg': return r.scores.reduce((s, v) => s + v, 0) / r.scores.length;
+        }}
+      }} else if (tableKey === 'sell') {{
+        switch(column) {{
+          case 'symbol': return item.symbol.toLowerCase();
+          case 'ma': return item.ma;
+          case 'score': return item.score;
+          case 'reason': return item.reason.toLowerCase();
+          case 'action': return item.action.toLowerCase();
+        }}
+      }} else if (tableKey === 'buy') {{
+        switch(column) {{
+          case 'symbol': return item.ticker.toLowerCase();
+          case 'ma': return (item.aboveMA30 ? 1 : 0) + (item.aboveMA60 ? 1 : 0) + (item.aboveMA200 ? 1 : 0);
+          case 'score': return item.score;
+        }}
+      }}
+      return 0;
+    }}
+
+    function sortAnalyzerColumn(tableKey, column) {{
+      const state = analyzerSort[tableKey];
+      if (state.column === column) {{
+        state.direction = state.direction === 'asc' ? 'desc' : 'asc';
+      }} else {{
+        state.column = column;
+        const stringCols = ['symbol', 'region', 'name', 'reason', 'action'];
+        state.direction = stringCols.includes(column) ? 'asc' : 'desc';
+      }}
+
+      const dir = state.direction === 'asc' ? 1 : -1;
+      const getData = (tableKey) => {{
+        switch(tableKey) {{
+          case 'holdings': return analyzerHoldings;
+          case 'region': return analyzerRegionData;
+          case 'sell': return analyzerSellRows;
+          case 'buy': return analyzerBuyCandidates;
+        }}
+      }};
+      const data = getData(tableKey);
+      data.sort((a, b) => {{
+        const va = getAnalyzerSortValue(tableKey, a, column);
+        const vb = getAnalyzerSortValue(tableKey, b, column);
+        if (va < vb) return -1 * dir;
+        if (va > vb) return 1 * dir;
+        return 0;
+      }});
+
+      switch(tableKey) {{
+        case 'holdings': renderAnalyzerHoldingsTable(); break;
+        case 'region': renderAnalyzerRegionTableRows(); break;
+        case 'sell': renderAnalyzerSellTable(); break;
+        case 'buy': renderAnalyzerBuyTable(); break;
+      }}
+    }}
+
+    function updateAnalyzerSortIndicators(tableKey) {{
+      document.querySelectorAll(`[id^="az-sort-${{tableKey}}-"]`).forEach(el => el.textContent = '');
+      const state = analyzerSort[tableKey];
+      if (state.column) {{
+        const el = document.getElementById(`az-sort-${{tableKey}}-${{state.column}}`);
+        if (el) el.textContent = state.direction === 'asc' ? '\u2191' : '\u2193';
+      }}
     }}
 
     // CIO Max% per asset class (country/region). Anything not listed defaults to 25%.
@@ -2122,31 +2323,9 @@ def generate_html(etf_data, correlations, generation_date):
         }}
       }});
 
-      const sellTable = document.getElementById('analyzer-sell-table');
-      const sellEmpty = document.getElementById('analyzer-sell-empty');
-      if (sellRows.length === 0) {{
-        sellTable.innerHTML = '';
-        sellEmpty.classList.remove('hidden');
-      }} else {{
-        sellEmpty.classList.add('hidden');
-        const maPill = (ma) => {{
-          const colors = {{ 0: 'bg-red-900/60 text-red-300', 1: 'bg-amber-900/60 text-amber-300', 2: 'bg-emerald-800/60 text-emerald-400', 3: 'bg-emerald-900 text-emerald-300' }};
-          return `<span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${{colors[ma]}}">${{ma}}/3</span>`;
-        }};
-        sellTable.innerHTML = sellRows.map(r => {{
-          const scoreColor = r.score >= 60 ? 'text-emerald-400' : r.score >= 40 ? 'text-amber-400' : 'text-red-400';
-          const actionBadge = r.action === 'Exit'
-            ? '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-red-900/60 text-red-300">Exit</span>'
-            : '<span class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-900/60 text-amber-300">Reduce</span>';
-          return `<tr class="border-b border-slate-800">
-            <td class="p-2.5 font-medium text-white mono">${{r.symbol}}</td>
-            <td class="p-2.5 text-center">${{maPill(r.ma)}}</td>
-            <td class="p-2.5 text-right mono ${{scoreColor}}">${{r.score.toFixed(0)}}</td>
-            <td class="p-2.5 text-xs text-slate-400">${{r.reason}}</td>
-            <td class="p-2.5 text-center">${{actionBadge}}</td>
-          </tr>`;
-        }}).join('');
-      }}
+      analyzerSellRows = sellRows;
+      analyzerSort.sell = {{ column: 'ma', direction: 'asc' }};
+      renderAnalyzerSellTable();
 
       // --- Buy Candidates ---
       const heldTickers = new Set(holdings.map(h => h.symbol));
@@ -2160,34 +2339,9 @@ def generate_html(etf_data, correlations, generation_date):
         return currentPct < maxPct;
       }});
 
-      const buyTable = document.getElementById('analyzer-buy-table');
-      const buyEmpty = document.getElementById('analyzer-buy-empty');
-      if (buyCandidates.length === 0) {{
-        buyTable.innerHTML = '';
-        buyEmpty.classList.remove('hidden');
-      }} else {{
-        buyEmpty.classList.add('hidden');
-        buyTable.innerHTML = buyCandidates.slice(0, 15).map(e => {{
-          const ma = (e.aboveMA30 ? 1 : 0) + (e.aboveMA60 ? 1 : 0) + (e.aboveMA200 ? 1 : 0);
-          const maPillColors = {{ 3: 'bg-emerald-900 text-emerald-300', 2: 'bg-emerald-800/60 text-emerald-400' }};
-          const scoreColor = e.score >= 60 ? 'text-emerald-400' : 'text-amber-400';
-          const c = e.country || 'Unknown';
-          const currentPct = totalValue > 0 ? ((countryWts[c] || 0) / totalValue * 100) : 0;
-          const maxPct = getAssetClassMaxPct(c);
-          const headroom = (maxPct - currentPct).toFixed(0);
-          const whyParts = [];
-          whyParts.push(`Score ${{e.score.toFixed(0)}}`);
-          whyParts.push(`MA=${{ma}}/3`);
-          whyParts.push(`${{c}} has ${{headroom}}% headroom`);
-          if (e.return6m > 10) whyParts.push(`+${{e.return6m.toFixed(0)}}% 6M`);
-          return `<tr class="border-b border-slate-800">
-            <td class="p-2.5 font-medium text-white mono">${{e.ticker}}</td>
-            <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${{maPillColors[ma]}}">${{ma}}/3</span></td>
-            <td class="p-2.5 text-right mono ${{scoreColor}}">${{e.score.toFixed(0)}}</td>
-            <td class="p-2.5 text-xs text-slate-400">${{whyParts.join(' \u00b7 ')}}</td>
-          </tr>`;
-        }}).join('');
-      }}
+      analyzerBuyCandidates = buyCandidates.slice(0, 15);
+      analyzerSort.buy = {{ column: 'score', direction: 'desc' }};
+      renderAnalyzerBuyTable();
     }}
 
     function renderAnalyzerDistribution(holdings, totalValue) {{
@@ -2252,22 +2406,9 @@ def generate_html(etf_data, correlations, generation_date):
         const ma = (h.instrument.aboveMA30 ? 1 : 0) + (h.instrument.aboveMA60 ? 1 : 0) + (h.instrument.aboveMA200 ? 1 : 0);
         r.ma[ma]++;
       }});
-      const regionRows = Object.entries(regions).sort((a, b) => b[1].value - a[1].value);
-      document.getElementById('analyzer-region-table').innerHTML = regionRows.map(([name, r]) => {{
-        const wt = totalValue > 0 ? (r.value / totalValue * 100) : 0;
-        const avg = r.scores.reduce((s, v) => s + v, 0) / r.scores.length;
-        const avgColor = avg >= 60 ? 'text-emerald-400' : avg >= 40 ? 'text-amber-400' : 'text-red-400';
-        return `<tr class="border-b border-slate-800">
-          <td class="p-2 text-white font-medium">${{name}}</td>
-          <td class="p-2 text-right mono text-slate-300">${{r.count}}</td>
-          <td class="p-2 text-right mono text-slate-300">${{wt.toFixed(1)}}%</td>
-          <td class="p-2 text-right mono text-emerald-400">${{r.ma[3]}}</td>
-          <td class="p-2 text-right mono text-emerald-400">${{r.ma[2]}}</td>
-          <td class="p-2 text-right mono text-amber-400">${{r.ma[1]}}</td>
-          <td class="p-2 text-right mono text-red-400">${{r.ma[0]}}</td>
-          <td class="p-2 text-right mono ${{avgColor}}">${{avg.toFixed(0)}}</td>
-        </tr>`;
-      }}).join('');
+      analyzerRegionData = Object.entries(regions).sort((a, b) => b[1].value - a[1].value);
+      analyzerSort.region = {{ column: 'wt', direction: 'desc' }};
+      renderAnalyzerRegionTableRows();
     }}
 
     // Initialize
