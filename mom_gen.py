@@ -1889,13 +1889,17 @@ def generate_html(etf_data, correlations, generation_date):
         .catch(() => {{ showAnalyzerLoading(false); analyzerAutoLoaded = false; }});
     }}
 
-    function csvSplitLine(line) {{
+    function detectDelimiter(line) {{
+      return line.split('\\t').length > line.split(',').length ? '\\t' : ',';
+    }}
+
+    function splitLine(line, delim) {{
       const cols = [];
       let cur = '', inQ = false;
       for (let i = 0; i < line.length; i++) {{
         const ch = line[i];
         if (ch === '"') {{ inQ = !inQ; }}
-        else if (ch === ',' && !inQ) {{ cols.push(cur.trim()); cur = ''; }}
+        else if (ch === delim && !inQ) {{ cols.push(cur.trim()); cur = ''; }}
         else {{ cur += ch; }}
       }}
       cols.push(cur.trim());
@@ -1911,10 +1915,11 @@ def generate_html(etf_data, correlations, generation_date):
       const lines = text.trim().split(/\\r?\\n/);
       if (lines.length < 2) return;
 
-      const header = csvSplitLine(lines[0]).map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
+      const delim = detectDelimiter(lines[0]);
+      const header = splitLine(lines[0], delim).map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
       const symIdx = header.findIndex(h => h === 'symbol' || h === 'ticker' || h === 'sym');
-      const sharesIdx = header.findIndex(h => h === 'shares' || h === 'quantity' || h === 'qty' || h === 'units' || h === 'position');
-      const costIdx = header.findIndex(h => h.includes('cost') || h.includes('basis') || h === 'avgcost');
+      const sharesIdx = header.findIndex(h => h === 'shares' || h === 'quantity' || h === 'qty' || h === 'units' || h === 'position' || h === 'amount');
+      const costIdx = header.findIndex(h => h.includes('cost') || h.includes('basis') || h === 'avgcost' || h === 'avgprice');
       const mktValIdx = header.findIndex(h => h === 'marketvalue' || h === 'mktval' || h === 'mktvalue' || (h.includes('market') && h.includes('val')));
       const weightIdx = header.findIndex(h => h === 'weight' || h === 'wt' || h === 'allocation' || (h.includes('weight') || h.includes('alloc')));
 
@@ -1930,7 +1935,7 @@ def generate_html(etf_data, correlations, generation_date):
       const unrecognized = [];
 
       for (let i = 1; i < lines.length; i++) {{
-        const cols = csvSplitLine(lines[i]);
+        const cols = splitLine(lines[i], delim);
         if (!cols[symIdx]) continue;
         const sym = cols[symIdx].toUpperCase().replace(/[^A-Z0-9.]/g, '');
         const shares = sharesIdx !== -1 ? cleanNum(cols[sharesIdx]) : 0;
