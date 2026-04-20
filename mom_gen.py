@@ -1845,6 +1845,51 @@ def generate_html(etf_data, correlations, generation_date):
 
     // ========== PORTFOLIO ANALYZER ==========
 
+    // Map a ticker to its native trading currency. Yahoo Finance returns
+    // prices in the security's local currency (e.g. 3110.HK is quoted in
+    // HKD), so we need to know the source currency to convert to USD.
+    function getInstrumentCurrency(ticker) {{
+      const t = (ticker || '').toUpperCase();
+      if (t.endsWith('.HK')) return 'HKD';
+      return 'USD';
+    }}
+
+    // Live FX rates: multiply a native-currency amount by rates[ccy] to get USD.
+    const analyzerFxRates = {{ USD: 1 }};
+    let analyzerFxLoaded = false;
+    let analyzerFxPromise = null;
+
+    function loadAnalyzerFxRates() {{
+      if (analyzerFxLoaded) return Promise.resolve(analyzerFxRates);
+      if (analyzerFxPromise) return analyzerFxPromise;
+      analyzerFxPromise = fetch('https://api.frankfurter.app/latest?from=HKD&to=USD')
+        .then(r => {{
+          if (!r.ok) throw new Error('FX HTTP ' + r.status);
+          return r.json();
+        }})
+        .then(data => {{
+          const rate = data && data.rates && data.rates.USD;
+          if (typeof rate !== 'number' || !(rate > 0)) {{
+            throw new Error('FX response missing rates.USD');
+          }}
+          analyzerFxRates.HKD = rate;
+          analyzerFxLoaded = true;
+          return analyzerFxRates;
+        }})
+        .catch(err => {{
+          analyzerFxPromise = null;
+          throw err;
+        }});
+      return analyzerFxPromise;
+    }}
+
+    function toUsd(value, currency) {{
+      if (!value) return 0;
+      if (currency === 'USD') return value;
+      const rate = analyzerFxRates[currency];
+      return typeof rate === 'number' ? value * rate : value;
+    }}
+
     function showAnalyzerLoading(show, detail) {{
       document.getElementById('analyzer-dropzone').classList.toggle('hidden', show);
       document.getElementById('analyzer-loading').classList.toggle('hidden', !show);
@@ -1883,20 +1928,27 @@ def generate_html(etf_data, correlations, generation_date):
         // Defer to let the loading UI paint
         requestAnimationFrame(() => {{
           setTimeout(() => {{
-            try {{
-              parseAnalyzerCSV(e.target.result);
-            }} catch (err) {{
-              showAnalyzerError(err && err.message ? err.message : String(err));
-              return;
-            }}
-            persistAnalyzerPortfolio(e.target.result);
-            analyzerAutoLoaded = true;
-            const badge = document.getElementById('analyzer-persist-badge');
-            if (badge) {{
-              const now = new Date();
-              badge.textContent = 'Last uploaded: ' + now.toLocaleDateString(undefined, {{ month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }});
-              badge.classList.remove('hidden');
-            }}
+            document.getElementById('analyzer-loading-detail').textContent = 'Fetching live FX rates…';
+            loadAnalyzerFxRates()
+              .catch(err => {{
+                console.warn('[PortfolioAnalyzer] FX rate load failed, HKD prices will not be converted', err);
+              }})
+              .then(() => {{
+                try {{
+                  parseAnalyzerCSV(e.target.result);
+                }} catch (err) {{
+                  showAnalyzerError(err && err.message ? err.message : String(err));
+                  return;
+                }}
+                persistAnalyzerPortfolio(e.target.result);
+                analyzerAutoLoaded = true;
+                const badge = document.getElementById('analyzer-persist-badge');
+                if (badge) {{
+                  const now = new Date();
+                  badge.textContent = 'Last uploaded: ' + now.toLocaleDateString(undefined, {{ month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }});
+                  badge.classList.remove('hidden');
+                }}
+              }});
           }}, 50);
         }});
       }};
@@ -1929,8 +1981,8 @@ def generate_html(etf_data, correlations, generation_date):
       analyzerAutoLoaded = true;
       clearAnalyzerError();
       showAnalyzerLoading(true, 'Loading last portfolio…');
-      fetch('/api/portfolios?name=__last_analyzer__')
-        .then(async r => {{
+      Promise.all([
+        fetch('/api/portfolios?name=__last_analyzer__').then(async r => {{
           if (r.status === 404) return null; // no saved portfolio — expected on first visit
           if (!r.ok) {{
             let detail = '';
@@ -1938,8 +1990,12 @@ def generate_html(etf_data, correlations, generation_date):
             throw new Error('Load failed (HTTP ' + r.status + ')' + (detail ? ': ' + detail : ''));
           }}
           return r.json();
-        }})
-        .then(data => {{
+        }}),
+        loadAnalyzerFxRates().catch(err => {{
+          console.warn('[PortfolioAnalyzer] FX rate load failed, HKD prices will not be converted', err);
+        }}),
+      ])
+        .then(([data]) => {{
           if (data === null) {{
             // No saved portfolio — quietly return to dropzone
             showAnalyzerLoading(false);
@@ -2069,7 +2125,23 @@ def generate_html(etf_data, correlations, generation_date):
           continue;
         }}
         const sym = instrument.ticker.toUpperCase();
-        holdings.push({{ symbol: sym, shares, costBasis, csvMktVal, csvWeight, instrument }});
+        // Normalize everything to USD. Yahoo Finance quotes 3110.HK in HKD, and
+        // broker CSV exports typically report cost basis / market value in the
+        // security's native currency — convert both using the live FX rate so
+        // all downstream math and display is in USD.
+        const currency = getInstrumentCurrency(instrument.ticker);
+        const usdInstrument = currency === 'USD'
+          ? instrument
+          : Object.assign({{}}, instrument, {{ price: toUsd(instrument.price, currency) }});
+        holdings.push({{
+          symbol: sym,
+          shares,
+          costBasis: toUsd(costBasis, currency),
+          csvMktVal: csvMktVal !== null ? toUsd(csvMktVal, currency) : null,
+          csvWeight,
+          instrument: usdInstrument,
+          currency,
+        }});
       }}
 
       if (holdings.length === 0) {{
