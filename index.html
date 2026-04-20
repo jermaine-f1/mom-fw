@@ -330,8 +330,9 @@
              ondragleave="this.classList.remove('border-indigo-500','bg-indigo-500/5');"
              ondrop="event.preventDefault(); this.classList.remove('border-indigo-500','bg-indigo-500/5'); handleAnalyzerFile(event.dataTransfer.files[0]);">
           <div class="text-4xl mb-3">📂</div>
-          <div class="text-slate-300 font-medium mb-1">Drop portfolio CSV · columns: Symbol, Shares, Cost Basis</div>
-          <div class="text-slate-500 text-sm mb-4">Last uploaded portfolio is persisted and shown to all users</div>
+          <div class="text-slate-300 font-medium mb-1">Drop portfolio CSV · required column: Symbol</div>
+          <div class="text-slate-500 text-sm mb-1">Optional: Shares/Amount/Quantity · Cost Basis/Avg Price · Market Value · Weight · Type (BUY/SELL) · delimiter: comma or tab</div>
+          <div class="text-slate-500 text-xs mb-4">Accepts <span class="mono text-slate-400">$1,234.56</span> / <span class="mono text-slate-400">1.97%</span> / suffixed tickers like <span class="mono text-slate-400">SHY.O</span>. SELL rows excluded. Last uploaded portfolio is persisted and shown to all users.</div>
           <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors" onclick="event.stopPropagation(); document.getElementById('analyzer-file-input').click();">Choose File</button>
           <input type="file" id="analyzer-file-input" accept=".csv" class="hidden" onchange="handleAnalyzerFile(this.files[0]);" />
         </div>
@@ -351,9 +352,15 @@
           <div class="text-slate-400 text-sm" id="analyzer-loading-detail">Parsing CSV</div>
         </div>
 
-        <!-- Unrecognized symbols banner (hidden by default) -->
+        <!-- Error banner (hidden by default) -->
+        <div id="analyzer-error" class="hidden bg-red-900/30 border border-red-600/50 rounded-xl p-4 text-red-300">
+          <div class="font-bold mb-1">⛔ Portfolio analyzer error</div>
+          <div id="analyzer-error-msg" class="text-sm text-red-200"></div>
+        </div>
+
+        <!-- Parsing notes banner — unrecognized symbols, skipped rows (hidden by default) -->
         <div id="analyzer-unrecognized" class="hidden bg-amber-900/30 border border-amber-600/50 rounded-xl p-4 text-amber-300">
-          <span class="font-bold">⚠ Unrecognized symbols:</span>
+          <span class="font-bold">⚠ Parsing notes:</span>
           <span id="analyzer-unrecognized-list"></span>
         </div>
 
@@ -18825,15 +18832,44 @@
       if (detail) document.getElementById('analyzer-loading-detail').textContent = detail;
     }
 
+    function showAnalyzerError(message) {
+      showAnalyzerLoading(false);
+      const banner = document.getElementById('analyzer-error');
+      const msgEl = document.getElementById('analyzer-error-msg');
+      if (banner && msgEl) {
+        msgEl.textContent = message;
+        banner.classList.remove('hidden');
+      }
+      console.error('[PortfolioAnalyzer]', message);
+    }
+
+    function clearAnalyzerError() {
+      const banner = document.getElementById('analyzer-error');
+      if (banner) banner.classList.add('hidden');
+    }
+
     function handleAnalyzerFile(file) {
-      if (!file) return;
+      if (!file) {
+        showAnalyzerError('No file selected.');
+        return;
+      }
+      clearAnalyzerError();
       showAnalyzerLoading(true, 'Reading ' + file.name);
       const reader = new FileReader();
+      reader.onerror = function() {
+        const err = reader.error;
+        showAnalyzerError('Failed to read file "' + file.name + '": ' + (err && err.message ? err.message : 'unknown I/O error'));
+      };
       reader.onload = function(e) {
         // Defer to let the loading UI paint
         requestAnimationFrame(() => {
           setTimeout(() => {
-            parseAnalyzerCSV(e.target.result);
+            try {
+              parseAnalyzerCSV(e.target.result);
+            } catch (err) {
+              showAnalyzerError(err && err.message ? err.message : String(err));
+              return;
+            }
             persistAnalyzerPortfolio(e.target.result);
             analyzerAutoLoaded = true;
             const badge = document.getElementById('analyzer-persist-badge');
@@ -18853,7 +18889,17 @@
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: '__last_analyzer__', csvText, holdings: [] }),
-      }).catch(() => {});
+      })
+        .then(async r => {
+          if (!r.ok) {
+            let detail = '';
+            try { detail = (await r.json()).error || ''; } catch (_) { detail = await r.text().catch(() => ''); }
+            throw new Error('Persist failed (HTTP ' + r.status + ')' + (detail ? ': ' + detail : ''));
+          }
+        })
+        .catch(err => {
+          showAnalyzerError('Could not save portfolio to server: ' + (err && err.message ? err.message : String(err)) + '. Your analysis is still shown below.');
+        });
     }
 
     let analyzerAutoLoaded = false;
@@ -18862,25 +18908,50 @@
       // Skip if results are already displayed
       if (!document.getElementById('analyzer-results').classList.contains('hidden')) return;
       analyzerAutoLoaded = true;
+      clearAnalyzerError();
       showAnalyzerLoading(true, 'Loading last portfolio…');
       fetch('/api/portfolios?name=__last_analyzer__')
-        .then(r => { if (!r.ok) throw new Error('No saved portfolio'); return r.json(); })
+        .then(async r => {
+          if (r.status === 404) return null; // no saved portfolio — expected on first visit
+          if (!r.ok) {
+            let detail = '';
+            try { detail = (await r.json()).error || ''; } catch (_) { detail = await r.text().catch(() => ''); }
+            throw new Error('Load failed (HTTP ' + r.status + ')' + (detail ? ': ' + detail : ''));
+          }
+          return r.json();
+        })
         .then(data => {
-          if (data.csvText) {
-            parseAnalyzerCSV(data.csvText);
-            const ts = data.savedAt ? new Date(data.savedAt) : null;
-            if (ts) {
-              const badge = document.getElementById('analyzer-persist-badge');
-              if (badge) {
-                badge.textContent = 'Last uploaded: ' + ts.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                badge.classList.remove('hidden');
-              }
-            }
-          } else {
+          if (data === null) {
+            // No saved portfolio — quietly return to dropzone
             showAnalyzerLoading(false);
+            analyzerAutoLoaded = false;
+            return;
+          }
+          if (!data.csvText) {
+            showAnalyzerLoading(false);
+            analyzerAutoLoaded = false;
+            showAnalyzerError('Saved portfolio is missing csvText. Please re-upload your CSV.');
+            return;
+          }
+          try {
+            parseAnalyzerCSV(data.csvText);
+          } catch (err) {
+            showAnalyzerError('Saved portfolio failed to parse: ' + (err && err.message ? err.message : String(err)));
+            return;
+          }
+          const ts = data.savedAt ? new Date(data.savedAt) : null;
+          if (ts) {
+            const badge = document.getElementById('analyzer-persist-badge');
+            if (badge) {
+              badge.textContent = 'Last uploaded: ' + ts.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+              badge.classList.remove('hidden');
+            }
           }
         })
-        .catch(() => { showAnalyzerLoading(false); analyzerAutoLoaded = false; });
+        .catch(err => {
+          analyzerAutoLoaded = false;
+          showAnalyzerError('Could not load saved portfolio: ' + (err && err.message ? err.message : String(err)));
+        });
     }
 
     function detectDelimiter(line) {
@@ -18906,53 +18977,112 @@
     }
 
     function parseAnalyzerCSV(text) {
+      if (typeof text !== 'string' || text.trim() === '') {
+        throw new Error('CSV is empty. Expected header row with a "Symbol" column plus at least one data row.');
+      }
       const lines = text.trim().split(/\r?\n/);
-      if (lines.length < 2) return;
+      if (lines.length < 2) {
+        throw new Error('CSV has ' + lines.length + ' row(s); expected a header row plus at least one data row.');
+      }
 
       const delim = detectDelimiter(lines[0]);
       const header = splitLine(lines[0], delim).map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
       const symIdx = header.findIndex(h => h === 'symbol' || h === 'ticker' || h === 'sym');
       const sharesIdx = header.findIndex(h => h === 'shares' || h === 'quantity' || h === 'qty' || h === 'units' || h === 'position' || h === 'amount');
-      const costIdx = header.findIndex(h => h.includes('cost') || h.includes('basis') || h === 'avgcost' || h === 'avgprice');
+      const costIdx = header.findIndex(h => h === 'avgprice' || h === 'avgcost' || h.includes('cost') || h.includes('basis'));
       const mktValIdx = header.findIndex(h => h === 'marketvalue' || h === 'mktval' || h === 'mktvalue' || (h.includes('market') && h.includes('val')));
-      const weightIdx = header.findIndex(h => h === 'weight' || h === 'wt' || h === 'allocation' || (h.includes('weight') || h.includes('alloc')));
+      const weightIdx = header.findIndex(h => h === 'weight' || h === 'wt' || h === 'allocation' || h.includes('alloc'));
+      const typeIdx = header.findIndex(h => h === 'type' || h === 'side' || h === 'action' || h === 'buysell');
 
       if (symIdx === -1) {
-        alert('CSV must contain a "Symbol" column');
-        return;
+        throw new Error('CSV must contain a "Symbol" column (accepted headers: Symbol, Ticker, Sym). Found headers: ' + splitLine(lines[0], delim).join(', '));
       }
 
+      // Build a ticker map keyed by both the full universe ticker ("3110.HK",
+      // "BAMI.MI") and its bare form ("3110", "BAMI"), so CSV inputs match
+      // regardless of whether the exchange suffix is present.
       const tickerMap = {};
-      etfUniverse.forEach(inst => { tickerMap[inst.ticker.toUpperCase()] = inst; });
+      etfUniverse.forEach(inst => {
+        const full = inst.ticker.toUpperCase();
+        tickerMap[full] = inst;
+        const bare = full.split('.')[0];
+        if (bare && bare !== full && !tickerMap[bare]) {
+          tickerMap[bare] = inst;
+        }
+      });
 
       const holdings = [];
       const unrecognized = [];
+      const filteredSellRows = [];
+      let skippedBlankRows = 0;
 
       for (let i = 1; i < lines.length; i++) {
         const cols = splitLine(lines[i], delim);
-        if (!cols[symIdx]) continue;
-        const sym = cols[symIdx].toUpperCase().replace(/[^A-Z0-9.]/g, '');
+        if (!cols[symIdx]) { skippedBlankRows++; continue; }
+        const rawSym = cols[symIdx].toUpperCase().replace(/[^A-Z0-9.]/g, '');
+        if (!rawSym) { skippedBlankRows++; continue; }
+
+        // Filter broker-export Type column: include BUY/LONG, skip SELL/SHORT/EXIT
+        if (typeIdx !== -1) {
+          const type = (cols[typeIdx] || '').trim().toUpperCase();
+          if (type && /^(SELL|SHORT|EXIT|CLOSE|SLD)/.test(type)) {
+            filteredSellRows.push(rawSym + ' (' + type + ')');
+            continue;
+          }
+        }
+
         const shares = sharesIdx !== -1 ? cleanNum(cols[sharesIdx]) : 0;
         const costBasis = costIdx !== -1 ? cleanNum(cols[costIdx]) : 0;
         const csvMktVal = mktValIdx !== -1 ? cleanNum(cols[mktValIdx]) : null;
         const csvWeight = weightIdx !== -1 ? cleanNum(cols[weightIdx]) : null;
-        const instrument = tickerMap[sym];
+
+        // Match against universe. Try the symbol as-entered first so
+        // "3110.HK" matches the universe entry "3110.HK" directly; fall back
+        // to the bare form so "SHY.O" matches universe entry "SHY" and "3110"
+        // matches "3110.HK" via the aliased key.
+        let instrument = tickerMap[rawSym];
+        if (!instrument && rawSym.includes('.')) {
+          const bare = rawSym.split('.')[0];
+          if (bare) instrument = tickerMap[bare];
+        }
         if (!instrument) {
-          unrecognized.push(sym);
+          unrecognized.push(rawSym);
           continue;
         }
+        const sym = instrument.ticker.toUpperCase();
         holdings.push({ symbol: sym, shares, costBasis, csvMktVal, csvWeight, instrument });
       }
 
+      if (holdings.length === 0) {
+        const parts = [];
+        parts.push('No recognized holdings found in CSV.');
+        if (unrecognized.length > 0) parts.push('Unrecognized symbols (' + unrecognized.length + '): ' + unrecognized.join(', ') + '. These tickers are not in the ETF universe.');
+        if (filteredSellRows.length > 0) parts.push('Skipped ' + filteredSellRows.length + ' non-BUY row(s): ' + filteredSellRows.join(', ') + '.');
+        if (skippedBlankRows > 0) parts.push(skippedBlankRows + ' row(s) had an empty Symbol column and were skipped.');
+        throw new Error(parts.join(' '));
+      }
+
       document.getElementById('analyzer-loading-detail').textContent = 'Scoring ' + holdings.length + ' holdings…';
-      renderAnalyzer(holdings, unrecognized);
+      try {
+        renderAnalyzer(holdings, unrecognized, filteredSellRows);
+      } catch (err) {
+        throw new Error('Failed to render analyzer after parsing ' + holdings.length + ' holdings: ' + (err && err.message ? err.message : String(err)));
+      }
     }
 
-    function renderAnalyzer(holdings, unrecognized) {
+    function renderAnalyzer(holdings, unrecognized, filteredSellRows) {
+      filteredSellRows = filteredSellRows || [];
       const banner = document.getElementById('analyzer-unrecognized');
+      const notes = [];
       if (unrecognized.length > 0) {
+        notes.push('Unrecognized symbols: ' + unrecognized.join(', '));
+      }
+      if (filteredSellRows.length > 0) {
+        notes.push('Skipped ' + filteredSellRows.length + ' non-BUY row(s): ' + filteredSellRows.join(', '));
+      }
+      if (notes.length > 0) {
         banner.classList.remove('hidden');
-        document.getElementById('analyzer-unrecognized-list').textContent = ' ' + unrecognized.join(', ');
+        document.getElementById('analyzer-unrecognized-list').textContent = ' ' + notes.join(' · ');
       } else {
         banner.classList.add('hidden');
       }
