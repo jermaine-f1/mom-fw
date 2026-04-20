@@ -1845,6 +1845,78 @@ def generate_html(etf_data, correlations, generation_date):
 
     // ========== PORTFOLIO ANALYZER ==========
 
+    // Map a ticker to its native trading currency. Yahoo Finance returns
+    // prices in the security's local currency (e.g. 3110.HK is quoted in
+    // HKD), so we need to know the source currency to convert to USD.
+    function getInstrumentCurrency(ticker) {{
+      const t = (ticker || '').toUpperCase();
+      if (t.endsWith('.HK')) return 'HKD';
+      return 'USD';
+    }}
+
+    // Live FX rates: multiply a native-currency amount by rates[ccy] to get USD.
+    const analyzerFxRates = {{ USD: 1 }};
+    let analyzerFxLoaded = false;
+    let analyzerFxPromise = null;
+    let analyzerFxWarning = null;
+
+    function loadAnalyzerFxRates() {{
+      if (analyzerFxLoaded) return Promise.resolve(analyzerFxRates);
+      if (analyzerFxPromise) return analyzerFxPromise;
+      // Primary: open.er-api.com (free, no key). Fall back to Frankfurter.
+      const sources = [
+        {{
+          url: 'https://open.er-api.com/v6/latest/HKD',
+          extract: data => data && data.rates && data.rates.USD,
+        }},
+        {{
+          url: 'https://api.frankfurter.app/latest?from=HKD&to=USD',
+          extract: data => data && data.rates && data.rates.USD,
+        }},
+      ];
+      const tryNext = (i) => {{
+        if (i >= sources.length) {{
+          throw new Error('All FX providers failed');
+        }}
+        return fetch(sources[i].url)
+          .then(r => {{
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          }})
+          .then(data => {{
+            const rate = sources[i].extract(data);
+            if (typeof rate !== 'number' || !(rate > 0)) {{
+              throw new Error('missing USD rate');
+            }}
+            return rate;
+          }})
+          .catch(err => {{
+            console.warn('[PortfolioAnalyzer] FX source failed (' + sources[i].url + '):', err);
+            return tryNext(i + 1);
+          }});
+      }};
+      analyzerFxPromise = tryNext(0)
+        .then(rate => {{
+          analyzerFxRates.HKD = rate;
+          analyzerFxLoaded = true;
+          analyzerFxWarning = null;
+          return analyzerFxRates;
+        }})
+        .catch(err => {{
+          analyzerFxPromise = null;
+          analyzerFxWarning = 'Could not fetch live FX rates — non-USD prices (e.g. .HK tickers in HKD) are shown in native currency.';
+          throw err;
+        }});
+      return analyzerFxPromise;
+    }}
+
+    function toUsd(value, currency) {{
+      if (!value) return 0;
+      if (currency === 'USD') return value;
+      const rate = analyzerFxRates[currency];
+      return typeof rate === 'number' ? value * rate : value;
+    }}
+
     function showAnalyzerLoading(show, detail) {{
       document.getElementById('analyzer-dropzone').classList.toggle('hidden', show);
       document.getElementById('analyzer-loading').classList.toggle('hidden', !show);
@@ -1883,20 +1955,27 @@ def generate_html(etf_data, correlations, generation_date):
         // Defer to let the loading UI paint
         requestAnimationFrame(() => {{
           setTimeout(() => {{
-            try {{
-              parseAnalyzerCSV(e.target.result);
-            }} catch (err) {{
-              showAnalyzerError(err && err.message ? err.message : String(err));
-              return;
-            }}
-            persistAnalyzerPortfolio(e.target.result);
-            analyzerAutoLoaded = true;
-            const badge = document.getElementById('analyzer-persist-badge');
-            if (badge) {{
-              const now = new Date();
-              badge.textContent = 'Last uploaded: ' + now.toLocaleDateString(undefined, {{ month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }});
-              badge.classList.remove('hidden');
-            }}
+            document.getElementById('analyzer-loading-detail').textContent = 'Fetching live FX rates…';
+            loadAnalyzerFxRates()
+              .catch(err => {{
+                console.warn('[PortfolioAnalyzer] FX rate load failed, HKD prices will not be converted', err);
+              }})
+              .then(() => {{
+                try {{
+                  parseAnalyzerCSV(e.target.result);
+                }} catch (err) {{
+                  showAnalyzerError(err && err.message ? err.message : String(err));
+                  return;
+                }}
+                persistAnalyzerPortfolio(e.target.result);
+                analyzerAutoLoaded = true;
+                const badge = document.getElementById('analyzer-persist-badge');
+                if (badge) {{
+                  const now = new Date();
+                  badge.textContent = 'Last uploaded: ' + now.toLocaleDateString(undefined, {{ month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }});
+                  badge.classList.remove('hidden');
+                }}
+              }});
           }}, 50);
         }});
       }};
@@ -1929,8 +2008,8 @@ def generate_html(etf_data, correlations, generation_date):
       analyzerAutoLoaded = true;
       clearAnalyzerError();
       showAnalyzerLoading(true, 'Loading last portfolio…');
-      fetch('/api/portfolios?name=__last_analyzer__')
-        .then(async r => {{
+      Promise.all([
+        fetch('/api/portfolios?name=__last_analyzer__').then(async r => {{
           if (r.status === 404) return null; // no saved portfolio — expected on first visit
           if (!r.ok) {{
             let detail = '';
@@ -1938,8 +2017,12 @@ def generate_html(etf_data, correlations, generation_date):
             throw new Error('Load failed (HTTP ' + r.status + ')' + (detail ? ': ' + detail : ''));
           }}
           return r.json();
-        }})
-        .then(data => {{
+        }}),
+        loadAnalyzerFxRates().catch(err => {{
+          console.warn('[PortfolioAnalyzer] FX rate load failed, HKD prices will not be converted', err);
+        }}),
+      ])
+        .then(([data]) => {{
           if (data === null) {{
             // No saved portfolio — quietly return to dropzone
             showAnalyzerLoading(false);
@@ -2069,7 +2152,23 @@ def generate_html(etf_data, correlations, generation_date):
           continue;
         }}
         const sym = instrument.ticker.toUpperCase();
-        holdings.push({{ symbol: sym, shares, costBasis, csvMktVal, csvWeight, instrument }});
+        // Normalize everything to USD. Yahoo Finance quotes 3110.HK in HKD, and
+        // broker CSV exports typically report cost basis / market value in the
+        // security's native currency — convert both using the live FX rate so
+        // all downstream math and display is in USD.
+        const currency = getInstrumentCurrency(instrument.ticker);
+        const usdInstrument = currency === 'USD'
+          ? instrument
+          : Object.assign({{}}, instrument, {{ price: toUsd(instrument.price, currency) }});
+        holdings.push({{
+          symbol: sym,
+          shares,
+          costBasis: toUsd(costBasis, currency),
+          csvMktVal: csvMktVal !== null ? toUsd(csvMktVal, currency) : null,
+          csvWeight,
+          instrument: usdInstrument,
+          currency,
+        }});
       }}
 
       if (holdings.length === 0) {{
@@ -2093,6 +2192,9 @@ def generate_html(etf_data, correlations, generation_date):
       filteredSellRows = filteredSellRows || [];
       const banner = document.getElementById('analyzer-unrecognized');
       const notes = [];
+      if (analyzerFxWarning) {{
+        notes.push(analyzerFxWarning);
+      }}
       if (unrecognized.length > 0) {{
         notes.push('Unrecognized symbols: ' + unrecognized.join(', '));
       }}
