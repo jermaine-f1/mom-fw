@@ -18998,8 +18998,18 @@
         throw new Error('CSV must contain a "Symbol" column (accepted headers: Symbol, Ticker, Sym). Found headers: ' + splitLine(lines[0], delim).join(', '));
       }
 
+      // Build a ticker map keyed by both the full universe ticker ("3110.HK",
+      // "BAMI.MI") and its bare form ("3110", "BAMI"), so CSV inputs match
+      // regardless of whether the exchange suffix is present.
       const tickerMap = {};
-      etfUniverse.forEach(inst => { tickerMap[inst.ticker.toUpperCase()] = inst; });
+      etfUniverse.forEach(inst => {
+        const full = inst.ticker.toUpperCase();
+        tickerMap[full] = inst;
+        const bare = full.split('.')[0];
+        if (bare && bare !== full && !tickerMap[bare]) {
+          tickerMap[bare] = inst;
+        }
+      });
 
       const holdings = [];
       const unrecognized = [];
@@ -19026,13 +19036,20 @@
         const csvMktVal = mktValIdx !== -1 ? cleanNum(cols[mktValIdx]) : null;
         const csvWeight = weightIdx !== -1 ? cleanNum(cols[weightIdx]) : null;
 
-        // Strip exchange-code suffix for matching: "SHY.O" -> "SHY", "3110.HK" -> "3110".
-        const sym = rawSym.split('.')[0];
-        const instrument = sym ? tickerMap[sym] : null;
+        // Match against universe. Try the symbol as-entered first so
+        // "3110.HK" matches the universe entry "3110.HK" directly; fall back
+        // to the bare form so "SHY.O" matches universe entry "SHY" and "3110"
+        // matches "3110.HK" via the aliased key.
+        let instrument = tickerMap[rawSym];
+        if (!instrument && rawSym.includes('.')) {
+          const bare = rawSym.split('.')[0];
+          if (bare) instrument = tickerMap[bare];
+        }
         if (!instrument) {
           unrecognized.push(rawSym);
           continue;
         }
+        const sym = instrument.ticker.toUpperCase();
         holdings.push({ symbol: sym, shares, costBasis, csvMktVal, csvWeight, instrument });
       }
 
