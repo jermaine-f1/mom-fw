@@ -2045,17 +2045,9 @@ def generate_html(etf_data, correlations, generation_date):
         const csvMktVal = mktValIdx !== -1 ? cleanNum(cols[mktValIdx]) : null;
         const csvWeight = weightIdx !== -1 ? cleanNum(cols[weightIdx]) : null;
 
-        // Match against ETF universe. Exact match first, then fall back to
-        // stripping an exchange-code suffix (e.g. "SHY.O" -> "SHY").
-        let sym = rawSym;
-        let instrument = tickerMap[sym];
-        if (!instrument && sym.includes('.')) {{
-          const bare = sym.split('.')[0];
-          if (bare && tickerMap[bare]) {{
-            instrument = tickerMap[bare];
-            sym = bare; // normalize to the universe ticker
-          }}
-        }}
+        // Strip exchange-code suffix for matching: "SHY.O" -> "SHY", "3110.HK" -> "3110".
+        const sym = rawSym.split('.')[0];
+        const instrument = sym ? tickerMap[sym] : null;
         if (!instrument) {{
           unrecognized.push(rawSym);
           continue;
