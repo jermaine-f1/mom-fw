@@ -18378,7 +18378,48 @@
 
     let cioConstraints = JSON.parse(JSON.stringify(CIO_CONSTRAINT_DEFAULTS));
 
+    // Map an instrument's country to one of the 4 CIO asset classes.
+    // US is grouped with DM; TAA ETFs are excluded (consistent with the
+    // region breakdown in renderAnalyzerDistribution).
+    function cioBucketForCountry(country) {
+      if (country === 'Emerging Markets') return 'em';
+      if (country === 'Developed Markets' || country === 'US') return 'dm';
+      if (country === 'Commodities') return 'commodities';
+      if (country === 'Cash') return 'cash';
+      return null;
+    }
+
+    // Returns { em, dm, commodities, cash } percentages from the currently
+    // loaded analyzer portfolio, or null if no portfolio is loaded.
+    function computeCioAllocations() {
+      if (!Array.isArray(analyzerHoldings) || analyzerHoldings.length === 0) return null;
+      const sums = { em: 0, dm: 0, commodities: 0, cash: 0 };
+      let total = 0;
+      for (const h of analyzerHoldings) {
+        const bucket = cioBucketForCountry(h.instrument && h.instrument.country);
+        if (!bucket) continue;
+        sums[bucket] += h.mktValue;
+        total += h.mktValue;
+      }
+      if (total <= 0) return null;
+      return {
+        em: sums.em / total * 100,
+        dm: sums.dm / total * 100,
+        commodities: sums.commodities / total * 100,
+        cash: sums.cash / total * 100,
+      };
+    }
+
+    function syncCioConstraintCurrents() {
+      const alloc = computeCioAllocations();
+      if (!alloc) return;
+      cioConstraints.forEach(c => {
+        if (alloc[c.id] !== undefined) c.current = alloc[c.id];
+      });
+    }
+
     function renderCioConstraints() {
+      syncCioConstraintCurrents();
       const total = cioConstraints.reduce((s, c) => s + c.current, 0);
 
       // Stacked allocation bar
@@ -18476,7 +18517,10 @@
 
     function saveCioConstraints() {
       try {
-        localStorage.setItem('cioConstraints', JSON.stringify(cioConstraints));
+        // Persist only the user-editable min/max; `current` is derived from
+        // the loaded portfolio each render.
+        const limits = cioConstraints.map(c => ({ id: c.id, min: c.min, max: c.max }));
+        localStorage.setItem('cioConstraints', JSON.stringify(limits));
       } catch(e) {}
       renderCioConstraints();
     }
@@ -18489,10 +18533,23 @@
       renderCioConstraints();
     }
 
-    // Load saved constraints on startup
+    // Load saved constraints on startup — apply only min/max so `current`
+    // continues to reflect the actual loaded portfolio.
     try {
       const saved = localStorage.getItem('cioConstraints');
-      if (saved) cioConstraints = JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const byId = {};
+          parsed.forEach(p => { if (p && p.id) byId[p.id] = p; });
+          cioConstraints.forEach(c => {
+            const s = byId[c.id];
+            if (!s) return;
+            if (typeof s.min === 'number') c.min = s.min;
+            if (typeof s.max === 'number') c.max = s.max;
+          });
+        }
+      }
     } catch(e) {}
 
     // ========== CIO SIGNALS DASHBOARD ==========
@@ -19270,6 +19327,10 @@
 
       // Sell/Reduce + Buy Candidates
       renderAnalyzerActions(holdings, totalValue);
+
+      // Refresh CIO asset class constraints so their Current% reflects the
+      // newly loaded portfolio rather than the hardcoded defaults.
+      renderCioConstraints();
 
       showAnalyzerLoading(false);
       document.getElementById('analyzer-results').classList.remove('hidden');
