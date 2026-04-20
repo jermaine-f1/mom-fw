@@ -573,8 +573,8 @@ def generate_html(etf_data, correlations, generation_date):
              ondrop="event.preventDefault(); this.classList.remove('border-indigo-500','bg-indigo-500/5'); handleAnalyzerFile(event.dataTransfer.files[0]);">
           <div class="text-4xl mb-3">📂</div>
           <div class="text-slate-300 font-medium mb-1">Drop portfolio CSV · required column: Symbol</div>
-          <div class="text-slate-500 text-sm mb-1">Optional columns: Shares, Cost Basis, Market Value, Weight · delimiter: comma or tab</div>
-          <div class="text-slate-500 text-xs mb-4">Example header: <span class="mono text-slate-400">Symbol,Shares,Cost Basis</span> · Last uploaded portfolio is persisted and shown to all users</div>
+          <div class="text-slate-500 text-sm mb-1">Optional: Shares/Amount/Quantity · Cost Basis/Avg Price · Market Value · Weight · Type (BUY/SELL) · delimiter: comma or tab</div>
+          <div class="text-slate-500 text-xs mb-4">Accepts <span class="mono text-slate-400">$1,234.56</span> / <span class="mono text-slate-400">1.97%</span> / suffixed tickers like <span class="mono text-slate-400">SHY.O</span>. SELL rows excluded. Last uploaded portfolio is persisted and shown to all users.</div>
           <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors" onclick="event.stopPropagation(); document.getElementById('analyzer-file-input').click();">Choose File</button>
           <input type="file" id="analyzer-file-input" accept=".csv" class="hidden" onchange="handleAnalyzerFile(this.files[0]);" />
         </div>
@@ -600,9 +600,9 @@ def generate_html(etf_data, correlations, generation_date):
           <div id="analyzer-error-msg" class="text-sm text-red-200"></div>
         </div>
 
-        <!-- Unrecognized symbols banner (hidden by default) -->
+        <!-- Parsing notes banner — unrecognized symbols, skipped rows (hidden by default) -->
         <div id="analyzer-unrecognized" class="hidden bg-amber-900/30 border border-amber-600/50 rounded-xl p-4 text-amber-300">
-          <span class="font-bold">⚠ Unrecognized symbols:</span>
+          <span class="font-bold">⚠ Parsing notes:</span>
           <span id="analyzer-unrecognized-list"></span>
         </div>
 
@@ -2008,9 +2008,10 @@ def generate_html(etf_data, correlations, generation_date):
       const header = splitLine(lines[0], delim).map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, ''));
       const symIdx = header.findIndex(h => h === 'symbol' || h === 'ticker' || h === 'sym');
       const sharesIdx = header.findIndex(h => h === 'shares' || h === 'quantity' || h === 'qty' || h === 'units' || h === 'position' || h === 'amount');
-      const costIdx = header.findIndex(h => h.includes('cost') || h.includes('basis') || h === 'avgcost' || h === 'avgprice');
+      const costIdx = header.findIndex(h => h === 'avgprice' || h === 'avgcost' || h.includes('cost') || h.includes('basis'));
       const mktValIdx = header.findIndex(h => h === 'marketvalue' || h === 'mktval' || h === 'mktvalue' || (h.includes('market') && h.includes('val')));
-      const weightIdx = header.findIndex(h => h === 'weight' || h === 'wt' || h === 'allocation' || (h.includes('weight') || h.includes('alloc')));
+      const weightIdx = header.findIndex(h => h === 'weight' || h === 'wt' || h === 'allocation' || h.includes('alloc'));
+      const typeIdx = header.findIndex(h => h === 'type' || h === 'side' || h === 'action' || h === 'buysell');
 
       if (symIdx === -1) {{
         throw new Error('CSV must contain a "Symbol" column (accepted headers: Symbol, Ticker, Sym). Found headers: ' + splitLine(lines[0], delim).join(', '));
@@ -2021,19 +2022,42 @@ def generate_html(etf_data, correlations, generation_date):
 
       const holdings = [];
       const unrecognized = [];
+      const filteredSellRows = [];
       let skippedBlankRows = 0;
 
       for (let i = 1; i < lines.length; i++) {{
         const cols = splitLine(lines[i], delim);
         if (!cols[symIdx]) {{ skippedBlankRows++; continue; }}
-        const sym = cols[symIdx].toUpperCase().replace(/[^A-Z0-9.]/g, '');
+        const rawSym = cols[symIdx].toUpperCase().replace(/[^A-Z0-9.]/g, '');
+        if (!rawSym) {{ skippedBlankRows++; continue; }}
+
+        // Filter broker-export Type column: include BUY/LONG, skip SELL/SHORT/EXIT
+        if (typeIdx !== -1) {{
+          const type = (cols[typeIdx] || '').trim().toUpperCase();
+          if (type && /^(SELL|SHORT|EXIT|CLOSE|SLD)/.test(type)) {{
+            filteredSellRows.push(rawSym + ' (' + type + ')');
+            continue;
+          }}
+        }}
+
         const shares = sharesIdx !== -1 ? cleanNum(cols[sharesIdx]) : 0;
         const costBasis = costIdx !== -1 ? cleanNum(cols[costIdx]) : 0;
         const csvMktVal = mktValIdx !== -1 ? cleanNum(cols[mktValIdx]) : null;
         const csvWeight = weightIdx !== -1 ? cleanNum(cols[weightIdx]) : null;
-        const instrument = tickerMap[sym];
+
+        // Match against ETF universe. Exact match first, then fall back to
+        // stripping an exchange-code suffix (e.g. "SHY.O" -> "SHY").
+        let sym = rawSym;
+        let instrument = tickerMap[sym];
+        if (!instrument && sym.includes('.')) {{
+          const bare = sym.split('.')[0];
+          if (bare && tickerMap[bare]) {{
+            instrument = tickerMap[bare];
+            sym = bare; // normalize to the universe ticker
+          }}
+        }}
         if (!instrument) {{
-          unrecognized.push(sym);
+          unrecognized.push(rawSym);
           continue;
         }}
         holdings.push({{ symbol: sym, shares, costBasis, csvMktVal, csvWeight, instrument }});
@@ -2043,23 +2067,32 @@ def generate_html(etf_data, correlations, generation_date):
         const parts = [];
         parts.push('No recognized holdings found in CSV.');
         if (unrecognized.length > 0) parts.push('Unrecognized symbols (' + unrecognized.length + '): ' + unrecognized.join(', ') + '. These tickers are not in the ETF universe.');
+        if (filteredSellRows.length > 0) parts.push('Skipped ' + filteredSellRows.length + ' non-BUY row(s): ' + filteredSellRows.join(', ') + '.');
         if (skippedBlankRows > 0) parts.push(skippedBlankRows + ' row(s) had an empty Symbol column and were skipped.');
         throw new Error(parts.join(' '));
       }}
 
       document.getElementById('analyzer-loading-detail').textContent = 'Scoring ' + holdings.length + ' holdings…';
       try {{
-        renderAnalyzer(holdings, unrecognized);
+        renderAnalyzer(holdings, unrecognized, filteredSellRows);
       }} catch (err) {{
         throw new Error('Failed to render analyzer after parsing ' + holdings.length + ' holdings: ' + (err && err.message ? err.message : String(err)));
       }}
     }}
 
-    function renderAnalyzer(holdings, unrecognized) {{
+    function renderAnalyzer(holdings, unrecognized, filteredSellRows) {{
+      filteredSellRows = filteredSellRows || [];
       const banner = document.getElementById('analyzer-unrecognized');
+      const notes = [];
       if (unrecognized.length > 0) {{
+        notes.push('Unrecognized symbols: ' + unrecognized.join(', '));
+      }}
+      if (filteredSellRows.length > 0) {{
+        notes.push('Skipped ' + filteredSellRows.length + ' non-BUY row(s): ' + filteredSellRows.join(', '));
+      }}
+      if (notes.length > 0) {{
         banner.classList.remove('hidden');
-        document.getElementById('analyzer-unrecognized-list').textContent = ' ' + unrecognized.join(', ');
+        document.getElementById('analyzer-unrecognized-list').textContent = ' ' + notes.join(' · ');
       }} else {{
         banner.classList.add('hidden');
       }}
