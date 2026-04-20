@@ -19366,7 +19366,7 @@
           <td class="p-3 text-right mono text-slate-300">${h.instrument.price.toFixed(2)}</td>
           <td class="p-3 text-right mono text-slate-300">${h.mktValue.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</td>
           <td class="p-3 text-right mono text-slate-300">${weight.toFixed(1)}%</td>
-          <td class="p-3 text-slate-400 text-xs">${h.instrument.country || '—'}</td>
+          <td class="p-3 text-slate-400 text-xs">${(!h.instrument.country || h.instrument.country === 'TAA ETFs') ? '—' : h.instrument.country}</td>
         </tr>`;
       }).join('');
       updateAnalyzerSortIndicators('holdings');
