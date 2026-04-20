@@ -18839,26 +18839,53 @@
     const analyzerFxRates = { USD: 1 };
     let analyzerFxLoaded = false;
     let analyzerFxPromise = null;
+    let analyzerFxWarning = null;
 
     function loadAnalyzerFxRates() {
       if (analyzerFxLoaded) return Promise.resolve(analyzerFxRates);
       if (analyzerFxPromise) return analyzerFxPromise;
-      analyzerFxPromise = fetch('https://api.frankfurter.app/latest?from=HKD&to=USD')
-        .then(r => {
-          if (!r.ok) throw new Error('FX HTTP ' + r.status);
-          return r.json();
-        })
-        .then(data => {
-          const rate = data && data.rates && data.rates.USD;
-          if (typeof rate !== 'number' || !(rate > 0)) {
-            throw new Error('FX response missing rates.USD');
-          }
+      // Primary: open.er-api.com (free, no key). Fall back to Frankfurter.
+      const sources = [
+        {
+          url: 'https://open.er-api.com/v6/latest/HKD',
+          extract: data => data && data.rates && data.rates.USD,
+        },
+        {
+          url: 'https://api.frankfurter.app/latest?from=HKD&to=USD',
+          extract: data => data && data.rates && data.rates.USD,
+        },
+      ];
+      const tryNext = (i) => {
+        if (i >= sources.length) {
+          throw new Error('All FX providers failed');
+        }
+        return fetch(sources[i].url)
+          .then(r => {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          })
+          .then(data => {
+            const rate = sources[i].extract(data);
+            if (typeof rate !== 'number' || !(rate > 0)) {
+              throw new Error('missing USD rate');
+            }
+            return rate;
+          })
+          .catch(err => {
+            console.warn('[PortfolioAnalyzer] FX source failed (' + sources[i].url + '):', err);
+            return tryNext(i + 1);
+          });
+      };
+      analyzerFxPromise = tryNext(0)
+        .then(rate => {
           analyzerFxRates.HKD = rate;
           analyzerFxLoaded = true;
+          analyzerFxWarning = null;
           return analyzerFxRates;
         })
         .catch(err => {
           analyzerFxPromise = null;
+          analyzerFxWarning = 'Could not fetch live FX rates — non-USD prices (e.g. .HK tickers in HKD) are shown in native currency.';
           throw err;
         });
       return analyzerFxPromise;
@@ -19146,6 +19173,9 @@
       filteredSellRows = filteredSellRows || [];
       const banner = document.getElementById('analyzer-unrecognized');
       const notes = [];
+      if (analyzerFxWarning) {
+        notes.push(analyzerFxWarning);
+      }
       if (unrecognized.length > 0) {
         notes.push('Unrecognized symbols: ' + unrecognized.join(', '));
       }
