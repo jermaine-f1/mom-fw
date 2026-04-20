@@ -17977,6 +17977,7 @@
     let analyzerSellRows = [];
     let analyzerBuyCandidates = [];
     let analyzerRegionData = [];
+    let analyzerRegionTotalValue = 0;
 
     // Initialize filter dropdowns
     function initFilterDropdowns() {
@@ -19440,7 +19441,7 @@
 
     function renderAnalyzerRegionTableRows() {
       document.getElementById('analyzer-region-table').innerHTML = analyzerRegionData.map(([name, r]) => {
-        const totalValue = analyzerTotalValue;
+        const totalValue = analyzerRegionTotalValue;
         const wt = totalValue > 0 ? (r.value / totalValue * 100) : 0;
         const avg = r.scores.reduce((s, v) => s + v, 0) / r.scores.length;
         const avgColor = avg >= 60 ? 'text-emerald-400' : avg >= 40 ? 'text-amber-400' : 'text-red-400';
@@ -19667,8 +19668,10 @@
       document.getElementById('analyzer-score-bar').innerHTML = scoreBarHtml;
       document.getElementById('analyzer-score-legend').innerHTML = scoreLegendHtml;
 
-      // Region breakdown table
+      // Region breakdown table — exclude TAA ETFs from both the rows and
+      // the denominator so region Wt% sums to 100% of non-TAA value.
       const regions = {};
+      let regionTotal = 0;
       holdings.forEach(h => {
         const c = h.instrument.country || 'Unknown';
         if (c === 'TAA ETFs') return;
@@ -19676,10 +19679,12 @@
         const r = regions[c];
         r.count++;
         r.value += h.mktValue;
+        regionTotal += h.mktValue;
         r.scores.push(h.score);
         const ma = (h.instrument.aboveMA30 ? 1 : 0) + (h.instrument.aboveMA60 ? 1 : 0) + (h.instrument.aboveMA200 ? 1 : 0);
         r.ma[ma]++;
       });
+      analyzerRegionTotalValue = regionTotal;
       analyzerRegionData = Object.entries(regions).sort((a, b) => b[1].value - a[1].value);
       analyzerSort.region = { column: 'wt', direction: 'desc' };
       renderAnalyzerRegionTableRows();
