@@ -4,6 +4,7 @@ import { rankUniverse } from "./lib/score";
 import { DEFAULT_SETTINGS } from "./types";
 import { Screener } from "./components/Screener";
 import { Settings } from "./components/Settings";
+import { CioSignals } from "./components/CioSignals";
 import { ComingSoon } from "./components/ComingSoon";
 
 type TabId =
@@ -100,12 +101,7 @@ export default function App() {
                 note="CSV upload, region breakdown, buy/sell candidates — pending port."
               />
             )}
-            {active === "cio" && (
-              <ComingSoon
-                title="CIO Signals"
-                note="Overview, Commodities, EM, DM, US, TAA sub-tabs — pending port."
-              />
-            )}
+            {active === "cio" && <CioSignals ranked={ranked} />}
             {active === "strategy" && (
               <ComingSoon
                 title="Strategy"
