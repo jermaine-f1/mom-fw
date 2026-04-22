@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    @apply min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100;
+  }
+}
+
+@layer components {
+  .mono {
+    font-family: "SF Mono", "Fira Code", monospace;
+  }
+
+  .top-idea-row {
+    background: linear-gradient(
+      90deg,
+      rgba(99, 102, 241, 0.08) 0%,
+      transparent 100%
+    );
+  }
+}

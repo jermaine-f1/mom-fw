@@ -2,6 +2,7 @@
 Tests for mom_gen.py - CIO Momentum Dashboard Generator
 """
 
+import json
 import os
 import sys
 import tempfile
@@ -26,7 +27,8 @@ from mom_gen import (
     fetch_data,
     calculate_metrics,
     calculate_correlations,
-    generate_html,
+    generate_data,
+    DATA_SCHEMA_VERSION,
 )
 
 
@@ -546,113 +548,69 @@ class TestFetchData:
         assert result is None
 
 
-# ======================== TESTS: generate_html ========================
+# ======================== TESTS: generate_data ========================
 
 
-class TestGenerateHTML:
-    """Tests for the HTML generation function."""
+class TestGenerateData:
+    """Tests for the JSON payload generator consumed by the frontend."""
 
-    def test_generates_valid_html(self):
-        etf_data = [
-            {
-                "ticker": "SPY",
-                "name": "SPDR S&P 500",
-                "sector": "US Broad Market",
-                "country": "US",
-                "category": "ETF",
-                "isETF": True,
-                "price": 450.0,
-                "return6m": 12.5,
-                "sortino": 1.5,
-                "weeksDown": 3,
-                "zScore": 0.8,
-                "slope": 0.15,
-                "aboveMA30": True,
-                "aboveMA60": True,
-                "aboveMA200": True,
-                "maxDD": -8.5,
-            }
-        ]
-        correlations = {}
-        html = generate_html(etf_data, correlations, "2024-06-15")
-        assert html is not None
-        assert isinstance(html, str)
-        assert "<!DOCTYPE html>" in html
+    def _make_etf(self, **overrides):
+        etf = {
+            "ticker": "SPY",
+            "name": "SPDR S&P 500",
+            "sector": "US Broad Market",
+            "country": "US",
+            "regions": ["US"],
+            "category": "ETF",
+            "isETF": True,
+            "price": 450.0,
+            "return6m": 12.5,
+            "sortino": 1.5,
+            "weeksDown": 3,
+            "zScore": 0.8,
+            "slope": 0.15,
+            "aboveMA30": True,
+            "aboveMA60": True,
+            "aboveMA200": True,
+            "maxDD": -8.5,
+        }
+        etf.update(overrides)
+        return etf
 
-    def test_html_contains_data(self):
-        etf_data = [
-            {
-                "ticker": "GLD",
-                "name": "SPDR Gold",
-                "sector": "Precious Metals",
-                "country": "Commodities",
-                "category": "ETF",
-                "isETF": True,
-                "price": 180.0,
-                "return6m": 8.0,
-                "sortino": 1.2,
-                "weeksDown": 4,
-                "zScore": 0.5,
-                "slope": 0.1,
-                "aboveMA30": True,
-                "aboveMA60": True,
-                "aboveMA200": True,
-                "maxDD": -5.0,
-            }
-        ]
-        html = generate_html(etf_data, {}, "2024-06-15")
-        # The etf data should be embedded as JSON
-        assert "GLD" in html
-        assert "SPDR Gold" in html
-        assert "Precious Metals" in html
+    def test_returns_dict_with_required_keys(self):
+        payload = generate_data([self._make_etf()], {"SPY-QQQ": 0.85}, "2024-06-15")
+        assert isinstance(payload, dict)
+        assert set(payload.keys()) == {
+            "schemaVersion",
+            "generatedAt",
+            "etfUniverse",
+            "correlations",
+        }
 
-    def test_html_contains_generation_date(self):
-        html = generate_html([], {}, "2024-06-15")
-        assert "2024-06-15" in html
+    def test_schema_version_matches_module_constant(self):
+        payload = generate_data([], {}, "2024-06-15")
+        assert payload["schemaVersion"] == DATA_SCHEMA_VERSION
 
-    def test_html_contains_correlations(self):
-        etf_data = []
+    def test_preserves_etf_rows_verbatim(self):
+        etf = self._make_etf()
+        payload = generate_data([etf], {}, "2024-06-15")
+        assert payload["etfUniverse"] == [etf]
+
+    def test_preserves_correlations_verbatim(self):
         correlations = {"SPY-QQQ": 0.85, "SPY-GLD": 0.12}
-        html = generate_html(etf_data, correlations, "2024-06-15")
-        assert "SPY-QQQ" in html
-        assert "0.85" in html
+        payload = generate_data([], correlations, "2024-06-15")
+        assert payload["correlations"] == correlations
 
-    def test_html_has_required_tabs(self):
-        html = generate_html([], {}, "2024-06-15")
-        assert "Screener" in html
-        assert "Portfolio" in html
-        assert "Strategy" in html
-        assert "Settings" in html
+    def test_generated_at_is_passed_through(self):
+        payload = generate_data([], {}, "2024-06-15 09:30 ET")
+        assert payload["generatedAt"] == "2024-06-15 09:30 ET"
 
-    def test_html_has_title(self):
-        html = generate_html([], {}, "2024-06-15")
-        assert "Momentum Portfolio Framework" in html
-
-    def test_html_multiple_etfs(self):
-        etf_data = [
-            {
-                "ticker": f"ETF{i}",
-                "name": f"ETF Number {i}",
-                "sector": "Test",
-                "country": "US",
-                "category": "ETF",
-                "isETF": True,
-                "price": 100.0 + i,
-                "return6m": 5.0 + i,
-                "sortino": 1.0,
-                "weeksDown": 2,
-                "zScore": 0.5,
-                "slope": 0.1,
-                "aboveMA30": True,
-                "aboveMA60": True,
-                "aboveMA200": True,
-                "maxDD": -3.0,
-            }
-            for i in range(10)
-        ]
-        html = generate_html(etf_data, {}, "2024-06-15")
-        for i in range(10):
-            assert f"ETF{i}" in html
+    def test_payload_is_json_serializable(self):
+        etfs = [self._make_etf(ticker=f"ETF{i}") for i in range(5)]
+        payload = generate_data(etfs, {"ETF0-ETF1": 0.5}, "2024-06-15")
+        serialized = json.dumps(payload)
+        assert "ETF0" in serialized
+        assert "ETF0-ETF1" in serialized
 
 
 # ======================== TESTS: Integration ========================
@@ -677,8 +635,8 @@ class TestIntegration:
         assert result["name"] == "SPDR S&P 500"
         assert result["sector"] == "US Broad Market"
 
-    def test_metrics_to_html_pipeline(self, sample_prices, sample_maps):
-        """Test from metrics calculation to HTML generation."""
+    def test_metrics_to_data_pipeline(self, sample_prices, sample_maps):
+        """Metrics → JSON payload wires through unchanged."""
         result = calculate_metrics(
             sample_prices, "SPY",
             sample_maps["sector_map"],
@@ -688,12 +646,12 @@ class TestIntegration:
         )
         assert result is not None
 
-        html = generate_html([result], {}, "2024-06-15")
-        assert "SPY" in html
-        assert "SPDR S&P 500" in html
+        payload = generate_data([result], {}, "2024-06-15")
+        assert payload["etfUniverse"][0]["ticker"] == "SPY"
+        assert payload["etfUniverse"][0]["name"] == "SPDR S&P 500"
 
     def test_full_pipeline_with_correlations(self, multi_ticker_prices, sample_maps):
-        """Test full pipeline: metrics + correlations + HTML."""
+        """Full pipeline: metrics + correlations + JSON payload."""
         etf_data = []
         for ticker in ["SPY", "QQQ", "GLD"]:
             result = calculate_metrics(
@@ -711,12 +669,11 @@ class TestIntegration:
             multi_ticker_prices, ["SPY", "QQQ", "GLD"]
         )
 
-        html = generate_html(etf_data, correlations, "2024-06-15")
-        assert len(etf_data) == 3
-        assert len(correlations) == 3
-        assert "SPY" in html
-        assert "QQQ" in html
-        assert "GLD" in html
+        payload = generate_data(etf_data, correlations, "2024-06-15")
+        assert len(payload["etfUniverse"]) == 3
+        assert len(payload["correlations"]) == 3
+        tickers_in_payload = {e["ticker"] for e in payload["etfUniverse"]}
+        assert tickers_in_payload == {"SPY", "QQQ", "GLD"}
 
 
 # ======================== TESTS: Edge Cases ========================

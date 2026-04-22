@@ -1,6 +1,21 @@
 # CIO Momentum Dashboard
 
-A Python-powered momentum investing dashboard that fetches live ETF/equity data from Yahoo Finance and generates an interactive HTML report for building diversified, quality momentum-based portfolios.
+A momentum investing dashboard for building diversified, quality momentum-based
+portfolios. A Python job fetches live ETF/equity data from Yahoo Finance and
+writes a JSON snapshot (`public/data.json`) that a Vite + React app renders in
+the browser.
+
+## Architecture
+
+- **`mom_gen.py`** — Python data pipeline. Loads `mapping.csv`, pulls prices
+  from Yahoo Finance, computes momentum metrics + pairwise correlations, and
+  writes `public/data.json`. Scheduled daily by `.github/workflows/daily-mom-gen.yml`.
+- **`src/`** — Vite + React + TypeScript dashboard (Tailwind CSS). Fetches
+  `/data.json` at runtime. The Screener tab is ported; Portfolio, Analyzer,
+  CIO Signals, Strategy, and Settings tabs are stubs pending further migration
+  from the legacy HTML.
+- **`api/portfolios.js`** — Vercel serverless function backed by Vercel Blob.
+  Unchanged.
 
 ## Overview
 
@@ -40,14 +55,34 @@ pip install -r requirements.txt
 
 ## Usage
 
-1. Edit `mapping.csv` to customize your instrument universe (optional)
-2. Run the generator:
+### 1. Generate the data snapshot
+
+Edit `mapping.csv` to customize your instrument universe (optional), then:
 
 ```bash
 python mom_gen.py
 ```
 
-3. Open `index.html` in any browser
+This writes `public/data.json`.
+
+### 2. Run the dashboard
+
+```bash
+npm install
+npm run dev
+```
+
+Open the URL Vite prints (default http://localhost:5173).
+
+### 3. Production build
+
+```bash
+npm run build    # outputs to dist/
+npm run preview  # serves dist/ locally
+```
+
+Vercel handles this automatically on deploy (`vercel.json` points
+`buildCommand` at `npm run build`).
 
 ## Instrument Universe (mapping.csv)
 

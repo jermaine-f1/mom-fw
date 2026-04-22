@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "placeholder — run `python mom_gen.py` to refresh",
+  "etfUniverse": [],
+  "correlations": {}
+}
