@@ -83,6 +83,11 @@ def load_etf_universe(csv_path):
         if region not in regions_map[sym]:
             regions_map[sym].append(region)
 
+    df = df.sort_values(
+        by='Region',
+        key=lambda s: s.eq('TAA ETFs'),
+        kind='stable',
+    )
     df = df.drop_duplicates(subset=['CleanSymbol'], keep='first')
 
     tickers = df['CleanSymbol'].tolist()
