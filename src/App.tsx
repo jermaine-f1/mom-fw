@@ -3,6 +3,7 @@ import { useData } from "./data/useData";
 import { rankUniverse } from "./lib/score";
 import { DEFAULT_SETTINGS } from "./types";
 import { Screener } from "./components/Screener";
+import { Settings } from "./components/Settings";
 import { ComingSoon } from "./components/ComingSoon";
 
 type TabId =
@@ -25,7 +26,7 @@ const TABS: { id: TabId; label: string }[] = [
 export default function App() {
   const data = useData();
   const [active, setActive] = useState<TabId>("signals");
-  const [settings] = useState(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
 
   const ranked = useMemo(() => {
     if (data.status !== "ready") return [];
@@ -112,10 +113,7 @@ export default function App() {
               />
             )}
             {active === "rules" && (
-              <ComingSoon
-                title="Settings"
-                note="Weighting sliders, top-N count, z-score steepness — pending port."
-              />
+              <Settings settings={settings} onApply={setSettings} />
             )}
           </>
         )}
