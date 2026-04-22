@@ -19256,6 +19256,8 @@
         <div class="text-2xl font-bold text-${c.color}-400 mono">${c.value}</div>
       </div>`).join('');
 
+      analyzerTotalValue = totalValue;
+
       // Score Distribution Panel
       renderAnalyzerDistribution(holdings, totalValue);
 
@@ -19266,7 +19268,6 @@
       });
       holdings.sort((a, b) => b.maStatus - a.maStatus || b.score - a.score);
       analyzerHoldings = holdings;
-      analyzerTotalValue = totalValue;
       analyzerSort.holdings = { column: 'maStatus', direction: 'desc' };
       renderAnalyzerHoldingsTable();
 
