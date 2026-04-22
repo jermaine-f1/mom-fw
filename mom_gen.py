@@ -22,6 +22,7 @@ from zoneinfo import ZoneInfo
 from scipy import stats
 import json
 import os
+import sys
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -132,6 +133,12 @@ def fetch_data(tickers):
         return None
 
 
+# Fail the whole run if more than this fraction of tickers produce no metrics.
+# Catches yfinance rate-limits or upstream outages that would otherwise
+# silently ship a thinned-out dataset.
+MAX_DROP_RATE = 0.25
+
+
 def calculate_metrics(prices, ticker, sector_map, country_map, name_map=None, category_map=None, regions_map=None):
     """Calculate all momentum metrics for a single ETF"""
     try:
@@ -238,8 +245,8 @@ def calculate_correlations(prices, tickers):
                 corr = corr_matrix.loc[t1, t2]
                 if not np.isnan(corr):
                     correlations[f"{t1}-{t2}"] = round(corr, 2)
-            except:
-                pass
+            except Exception as e:
+                print(f"  ⚠️ Correlation {t1}-{t2} skipped: {e}")
 
     return correlations
 
@@ -266,19 +273,37 @@ def main():
 
     prices = fetch_data(tickers)
     if prices is None:
-        return
+        print("❌ Aborting: price fetch failed. Not overwriting public/data.json.")
+        sys.exit(1)
 
     print("\n📈 Calculating metrics...")
     etf_data = []
+    dropped = []
     for ticker in tickers:
-        if ticker in prices.columns:
-            metrics = calculate_metrics(prices[ticker], ticker, sector_map, country_map, name_map, category_map, regions_map)
-            if metrics:
-                etf_data.append(metrics)
-                etf_label = "ETF" if metrics['isETF'] else "EQ"
-                print(f"  ✓ {ticker} [{etf_label}]: {metrics['return6m']:+.1f}% | Sortino: {metrics['sortino']:.2f} | Z: {metrics['zScore']:.2f}")
+        if ticker not in prices.columns:
+            dropped.append((ticker, "no price column"))
+            continue
+        metrics = calculate_metrics(prices[ticker], ticker, sector_map, country_map, name_map, category_map, regions_map)
+        if metrics:
+            etf_data.append(metrics)
+            etf_label = "ETF" if metrics['isETF'] else "EQ"
+            print(f"  ✓ {ticker} [{etf_label}]: {metrics['return6m']:+.1f}% | Sortino: {metrics['sortino']:.2f} | Z: {metrics['zScore']:.2f}")
+        else:
+            dropped.append((ticker, "calculate_metrics returned None"))
 
-    print(f"\n✓ Processed {len(etf_data)} symbols")
+    print(f"\n✓ Processed {len(etf_data)} symbols, dropped {len(dropped)}")
+    if dropped:
+        print("   Dropped tickers:")
+        for ticker, reason in dropped:
+            print(f"     • {ticker}: {reason}")
+
+    drop_rate = len(dropped) / len(tickers) if tickers else 0
+    if drop_rate > MAX_DROP_RATE:
+        print(
+            f"❌ Aborting: drop rate {drop_rate:.0%} exceeds threshold {MAX_DROP_RATE:.0%}. "
+            f"Refusing to overwrite public/data.json with a thinned-out dataset."
+        )
+        sys.exit(1)
 
     valid_tickers = [e['ticker'] for e in etf_data]
     correlations = calculate_correlations(prices, valid_tickers)

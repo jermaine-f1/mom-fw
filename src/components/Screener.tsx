@@ -99,9 +99,23 @@ export function Screener({ ranked, settings }: Props) {
     [ranked, settings.topCount],
   );
 
+  const parseNumericFilter = (raw: string): number | null => {
+    if (raw === "") return null;
+    const n = parseFloat(raw);
+    // parseFloat("abc") === NaN. NaN comparisons are always false, so the
+    // filter would silently no-op — return null explicitly so callers can
+    // decide (here: treat as "no filter" AND flag to the user).
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const zCapInvalid =
+    filters.zScoreCap !== "" && !Number.isFinite(parseFloat(filters.zScoreCap));
+  const minScoreInvalid =
+    filters.minScore !== "" && !Number.isFinite(parseFloat(filters.minScore));
+
   const filtered = useMemo(() => {
-    const zCap = filters.zScoreCap !== "" ? parseFloat(filters.zScoreCap) : null;
-    const minS = filters.minScore !== "" ? parseFloat(filters.minScore) : null;
+    const zCap = parseNumericFilter(filters.zScoreCap);
+    const minS = parseNumericFilter(filters.minScore);
     const search = filters.search.toLowerCase();
 
     const list = ranked.filter((e) => {
@@ -260,9 +274,16 @@ export function Screener({ ranked, settings }: Props) {
                 min="0"
                 max="10"
                 placeholder="—"
-                className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm w-16 mono text-center focus:outline-none focus:border-indigo-500"
+                className={
+                  "bg-slate-700 border rounded px-2 py-1 text-sm w-16 mono text-center focus:outline-none " +
+                  (zCapInvalid
+                    ? "border-red-500 focus:border-red-500"
+                    : "border-slate-600 focus:border-indigo-500")
+                }
                 value={filters.zScoreCap}
                 onChange={(e) => setFilter("zScoreCap", e.target.value)}
+                aria-invalid={zCapInvalid}
+                title={zCapInvalid ? "Not a number — filter ignored" : undefined}
               />
             </div>
             <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-2">
@@ -273,9 +294,16 @@ export function Screener({ ranked, settings }: Props) {
                 min="0"
                 max="100"
                 placeholder="—"
-                className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm w-16 mono text-center focus:outline-none focus:border-indigo-500"
+                className={
+                  "bg-slate-700 border rounded px-2 py-1 text-sm w-16 mono text-center focus:outline-none " +
+                  (minScoreInvalid
+                    ? "border-red-500 focus:border-red-500"
+                    : "border-slate-600 focus:border-indigo-500")
+                }
                 value={filters.minScore}
                 onChange={(e) => setFilter("minScore", e.target.value)}
+                aria-invalid={minScoreInvalid}
+                title={minScoreInvalid ? "Not a number — filter ignored" : undefined}
               />
             </div>
           </div>
