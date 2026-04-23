@@ -19284,8 +19284,8 @@
 
     const maPillColors = {
       3: 'bg-emerald-900 text-emerald-300',
-      2: 'bg-emerald-800/60 text-emerald-400',
-      1: 'bg-amber-900/60 text-amber-300',
+      2: 'bg-amber-900/60 text-amber-300',
+      1: 'bg-orange-900/60 text-orange-300',
       0: 'bg-red-900/60 text-red-300',
     };
 
@@ -19321,7 +19321,7 @@
       } else {
         sellEmpty.classList.add('hidden');
         const maPill = (ma) => {
-          const colors = { 0: 'bg-red-900/60 text-red-300', 1: 'bg-amber-900/60 text-amber-300', 2: 'bg-emerald-800/60 text-emerald-400', 3: 'bg-emerald-900 text-emerald-300' };
+          const colors = { 0: 'bg-red-900/60 text-red-300', 1: 'bg-orange-900/60 text-orange-300', 2: 'bg-amber-900/60 text-amber-300', 3: 'bg-emerald-900 text-emerald-300' };
           return `<span class="px-2 py-0.5 rounded-full text-xs font-bold mono ${colors[ma]}">${ma}/3</span>`;
         };
         sellTable.innerHTML = analyzerSellRows.map(r => {
@@ -19357,7 +19357,7 @@
         });
         buyTable.innerHTML = analyzerBuyCandidates.map(e => {
           const ma = (e.aboveMA30 ? 1 : 0) + (e.aboveMA60 ? 1 : 0) + (e.aboveMA200 ? 1 : 0);
-          const bPillColors = { 3: 'bg-emerald-900 text-emerald-300', 2: 'bg-emerald-800/60 text-emerald-400' };
+          const bPillColors = { 3: 'bg-emerald-900 text-emerald-300', 2: 'bg-amber-900/60 text-amber-300' };
           const scoreColor = e.score >= 60 ? 'text-emerald-400' : 'text-amber-400';
           const c = e.country || 'Unknown';
           const currentPct = totalValue > 0 ? ((countryWts[c] || 0) / totalValue * 100) : 0;
