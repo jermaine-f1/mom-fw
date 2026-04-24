@@ -2295,6 +2295,9 @@ def generate_html(etf_data, correlations, generation_date):
       // Sell/Reduce + Buy Candidates
       renderAnalyzerActions(holdings, totalValue);
 
+      // Sync Settings > CIO current% with the live portfolio
+      updateCioCurrentFromHoldings(holdings, totalValue);
+
       showAnalyzerLoading(false);
       document.getElementById('analyzer-results').classList.remove('hidden');
     }}
@@ -2529,6 +2532,25 @@ def generate_html(etf_data, correlations, generation_date):
       if (!id) return null;
       const entry = cioConstraints.find(c => c.id === id);
       return entry ? entry.max : null;
+    }}
+
+    // Recompute cioConstraints[i].current from loaded holdings so the
+    // Settings > CIO tab matches the Portfolio Analyzer. Countries without
+    // an asset-class mapping (e.g. TAA ETFs) contribute to no bucket, so
+    // buckets may sum to <100% — the Settings footer reports that honestly.
+    function updateCioCurrentFromHoldings(holdings, totalValue) {{
+      const byId = {{}};
+      cioConstraints.forEach(c => {{ byId[c.id] = 0; }});
+      if (totalValue > 0) {{
+        holdings.forEach(h => {{
+          const id = COUNTRY_TO_CIO_ID[h.instrument.country];
+          if (id && byId[id] !== undefined) byId[id] += h.mktValue;
+        }});
+      }}
+      cioConstraints.forEach(c => {{
+        c.current = totalValue > 0 ? (byId[c.id] / totalValue * 100) : 0;
+      }});
+      renderCioConstraints();
     }}
 
     function renderAnalyzerActions(holdings, totalValue) {{
