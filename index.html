@@ -19173,6 +19173,22 @@
 
     function renderAnalyzer(holdings, unrecognized, filteredSellRows) {
       filteredSellRows = filteredSellRows || [];
+
+      // Fail fast: every holding's country must map to an asset-class
+      // bucket (or be the intentional TAA ETFs exclusion). An unmapped
+      // country would silently drop from the Settings > CIO current%
+      // totals and desync the two views.
+      const unmapped = [];
+      holdings.forEach(h => {
+        const c = h.instrument.country;
+        if (c && c !== 'TAA ETFs' && !(c in COUNTRY_TO_CIO_ID)) {
+          unmapped.push(h.symbol + ' (' + c + ')');
+        }
+      });
+      if (unmapped.length > 0) {
+        throw new Error('Unmapped region(s) — add to COUNTRY_TO_CIO_ID: ' + unmapped.join(', '));
+      }
+
       const banner = document.getElementById('analyzer-unrecognized');
       const notes = [];
       if (analyzerFxWarning) {
@@ -19273,6 +19289,9 @@
       // Sell/Reduce + Buy Candidates
       renderAnalyzerActions(holdings, totalValue);
 
+      // Sync Settings > CIO current% with the live portfolio
+      updateCioCurrentFromHoldings(holdings, totalValue);
+
       showAnalyzerLoading(false);
       document.getElementById('analyzer-results').classList.remove('hidden');
     }
@@ -19362,11 +19381,13 @@
           const c = e.country || 'Unknown';
           const currentPct = totalValue > 0 ? ((countryWts[c] || 0) / totalValue * 100) : 0;
           const maxPct = getAssetClassMaxPct(c);
-          const headroom = (maxPct - currentPct).toFixed(0);
           const whyParts = [];
           whyParts.push(`Score ${e.score.toFixed(0)}`);
           whyParts.push(`MA=${ma}/3`);
-          whyParts.push(`${c} has ${headroom}% headroom`);
+          if (maxPct != null) {
+            const headroom = (maxPct - currentPct).toFixed(0);
+            whyParts.push(`${c} has ${headroom}% headroom`);
+          }
           if (e.return6m > 10) whyParts.push(`+${e.return6m.toFixed(0)}% 6M`);
           return `<tr class="border-b border-slate-800">
             <td class="p-2.5 font-medium text-white mono">${e.ticker}</td>
@@ -19489,16 +19510,41 @@
       }
     }
 
-    // CIO Max% per asset class (country/region). Anything not listed defaults to 25%.
-    const CIO_MAX_PCT = {
-      'US': 40, 'Commodities': 20, 'India': 15,
-      'Emerging Markets': 20, 'Developed Markets': 30,
-      'Japan': 15, 'China': 15, 'Brazil': 10, 'Taiwan': 10,
+    // Per-country max% is driven by the Settings > CIO asset-class constraints
+    // (cioConstraints). Countries without a mapping have no configured max.
+    const COUNTRY_TO_CIO_ID = {
+      'Emerging Markets': 'em',
+      'India': 'em',
+      'Developed Markets': 'dm',
+      'US': 'dm',
+      'Commodities': 'commodities',
+      'Cash': 'cash',
     };
-    const CIO_DEFAULT_MAX_PCT = 25;
 
     function getAssetClassMaxPct(country) {
-      return CIO_MAX_PCT[country] || CIO_DEFAULT_MAX_PCT;
+      const id = COUNTRY_TO_CIO_ID[country];
+      if (!id) return null;
+      const entry = cioConstraints.find(c => c.id === id);
+      return entry ? entry.max : null;
+    }
+
+    // Recompute cioConstraints[i].current from loaded holdings so the
+    // Settings > CIO tab matches the Portfolio Analyzer. Countries without
+    // an asset-class mapping (e.g. TAA ETFs) contribute to no bucket, so
+    // buckets may sum to <100% — the Settings footer reports that honestly.
+    function updateCioCurrentFromHoldings(holdings, totalValue) {
+      const byId = {};
+      cioConstraints.forEach(c => { byId[c.id] = 0; });
+      if (totalValue > 0) {
+        holdings.forEach(h => {
+          const id = COUNTRY_TO_CIO_ID[h.instrument.country];
+          if (id && byId[id] !== undefined) byId[id] += h.mktValue;
+        });
+      }
+      cioConstraints.forEach(c => {
+        c.current = totalValue > 0 ? (byId[c.id] / totalValue * 100) : 0;
+      });
+      renderCioConstraints();
     }
 
     function renderAnalyzerActions(holdings, totalValue) {
@@ -19528,7 +19574,7 @@
           action = 'Reduce';
         }
 
-        if (countryPct > maxPct) {
+        if (maxPct != null && countryPct > maxPct) {
           reasons.push(`${h.instrument.country} at ${countryPct.toFixed(0)}% > ${maxPct}% max`);
           if (!action) action = 'Reduce';
         }
@@ -19551,7 +19597,7 @@
         const c = e.country || 'Unknown';
         const currentPct = totalValue > 0 ? ((countryWts[c] || 0) / totalValue * 100) : 0;
         const maxPct = getAssetClassMaxPct(c);
-        return currentPct < maxPct;
+        return maxPct == null || currentPct < maxPct;
       });
 
       analyzerBuyCandidates = buyCandidates.slice(0, 15);
