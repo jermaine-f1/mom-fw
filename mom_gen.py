@@ -2195,6 +2195,22 @@ def generate_html(etf_data, correlations, generation_date):
 
     function renderAnalyzer(holdings, unrecognized, filteredSellRows) {{
       filteredSellRows = filteredSellRows || [];
+
+      // Fail fast: every holding's country must map to an asset-class
+      // bucket (or be the intentional TAA ETFs exclusion). An unmapped
+      // country would silently drop from the Settings > CIO current%
+      // totals and desync the two views.
+      const unmapped = [];
+      holdings.forEach(h => {{
+        const c = h.instrument.country;
+        if (c && c !== 'TAA ETFs' && !(c in COUNTRY_TO_CIO_ID)) {{
+          unmapped.push(h.symbol + ' (' + c + ')');
+        }}
+      }});
+      if (unmapped.length > 0) {{
+        throw new Error('Unmapped region(s) — add to COUNTRY_TO_CIO_ID: ' + unmapped.join(', '));
+      }}
+
       const banner = document.getElementById('analyzer-unrecognized');
       const notes = [];
       if (analyzerFxWarning) {{
