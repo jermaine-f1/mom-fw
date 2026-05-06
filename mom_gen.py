@@ -398,6 +398,9 @@ def generate_html(etf_data, correlations, generation_date):
                   <th class="px-3 py-2 text-center cursor-pointer hover:text-white select-none" onclick="sortTable('maStatus')">
                     MA <span id="sort-maStatus" class="text-indigo-400"></span>
                   </th>
+                  <th class="px-3 py-2 text-right cursor-pointer hover:text-white select-none" onclick="sortTable('tama')" title="Trend-Adjusted Momentum Alpha = z-score of [Score × (0.5 + 0.5 × MA/3)]">
+                    TAMA <span id="sort-tama" class="text-indigo-400"></span>
+                  </th>
                 </tr>
               </thead>
               <tbody id="signals-table">
@@ -985,7 +988,21 @@ def generate_html(etf_data, correlations, generation_date):
       return {{ ...etf, score: total, maStatus }};
     }}
 
-    let rankedETFs = etfUniverse.map(calculateScore).sort((a, b) => b.score - a.score);
+    // Compute TAMA — Trend-Adjusted Momentum Alpha
+    // raw = score * (0.5 + 0.5 * MA/3), then z-score across the universe
+    function applyTAMA(etfs) {{
+      const raws = etfs.map(e => e.score * (0.5 + 0.5 * (e.maStatus / 3)));
+      const mean = raws.reduce((a, b) => a + b, 0) / raws.length;
+      const variance = raws.reduce((s, v) => s + (v - mean) ** 2, 0) / raws.length;
+      const std = Math.sqrt(variance);
+      etfs.forEach((e, i) => {{
+        e.tamaRaw = raws[i];
+        e.tama = std > 0 ? (raws[i] - mean) / std : 0;
+      }});
+      return etfs;
+    }}
+
+    let rankedETFs = applyTAMA(etfUniverse.map(calculateScore)).sort((a, b) => b.score - a.score);
     let filteredETFs = rankedETFs;
     let currentSort = {{ column: 'score', direction: 'desc' }};
 
@@ -1085,7 +1102,7 @@ def generate_html(etf_data, correlations, generation_date):
         currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
       }} else {{
         currentSort.column = column;
-        const numericColumns = ['price', 'score', 'return6m', 'sortino', 'weeksDown', 'zScore', 'maStatus'];
+        const numericColumns = ['price', 'score', 'return6m', 'sortino', 'weeksDown', 'zScore', 'maStatus', 'tama'];
         currentSort.direction = numericColumns.includes(column) ? 'desc' : 'asc';
       }}
       
@@ -1204,6 +1221,7 @@ def generate_html(etf_data, correlations, generation_date):
             <td class="px-3 py-2 text-right mono ${{etf.weeksDown >= 8 ? 'text-red-400' : ''}}">${{etf.weeksDown}}/12</td>
             <td class="px-3 py-2 text-right mono ${{etf.zScore > 4 ? 'text-red-400 font-bold' : etf.zScore > 3 ? 'text-orange-400' : ''}}">${{etf.zScore.toFixed(1)}}</td>
             <td class="px-3 py-2 text-center ${{etf.maStatus === 3 ? 'text-emerald-400' : etf.maStatus >= 2 ? 'text-yellow-400' : 'text-red-400'}}">${{etf.maStatus}}/3</td>
+            <td class="px-3 py-2 text-right mono font-bold ${{etf.tama >= 1 ? 'text-emerald-400' : etf.tama >= 0 ? 'text-indigo-300' : etf.tama >= -1 ? 'text-amber-400' : 'text-red-400'}}">${{etf.tama >= 0 ? '+' : ''}}${{etf.tama.toFixed(2)}}</td>
           </tr>
         `;
       }}).join('');
