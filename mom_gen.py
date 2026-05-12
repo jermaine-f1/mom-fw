@@ -361,6 +361,9 @@ def generate_html(etf_data, correlations, generation_date):
             <div class="flex items-center gap-3">
               <span class="text-xs text-slate-500">⭐ = Top 20 Ideas</span>
               <span class="text-xs text-slate-500">Click headers to sort</span>
+              <button onclick="exportScreenerCSV()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-medium text-white transition-colors flex items-center gap-1.5" title="Export current filtered/sorted screener results as CSV">
+                ⬇ Export CSV
+              </button>
             </div>
           </div>
           <div class="overflow-x-auto">
@@ -1225,6 +1228,48 @@ def generate_html(etf_data, correlations, generation_date):
           </tr>
         `;
       }}).join('');
+    }}
+
+    // Export current filtered screener results as CSV
+    function exportScreenerCSV() {{
+      if (!filteredETFs || filteredETFs.length === 0) {{
+        alert('No screener results to export. Adjust filters and try again.');
+        return;
+      }}
+      const topIdeasSet = new Set(rankedETFs.slice(0, settings.topCount).map(e => e.ticker));
+      const headers = ['Rank','TopIdea','Symbol','Type','Sector','Region','Price','Score','Return6M_Pct','Sortino','WeeksDown','ZScore','MAStatus','TAMA'];
+      const escape = (v) => {{
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }};
+      const rows = filteredETFs.map((etf, i) => [
+        i + 1,
+        topIdeasSet.has(etf.ticker) ? 'Y' : '',
+        etf.ticker,
+        etf.isETF ? 'ETF' : 'Stock',
+        etf.sector,
+        etf.country,
+        etf.price != null ? etf.price.toFixed(2) : '',
+        etf.score.toFixed(2),
+        etf.return6m.toFixed(2),
+        etf.sortino.toFixed(2),
+        etf.weeksDown,
+        etf.zScore.toFixed(2),
+        etf.maStatus + '/3',
+        etf.tama.toFixed(2),
+      ].map(escape).join(','));
+      const csv = headers.join(',') + '\n' + rows.join('\n');
+      const blob = new Blob(['﻿' + csv], {{ type: 'text/csv;charset=utf-8;' }});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ts = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `screener_${{ts}}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }}
 
     // Portfolio construction — uses top ranked from filtered list
