@@ -83,9 +83,13 @@ def load_etf_universe(csv_path):
         if region not in regions_map[sym]:
             regions_map[sym].append(region)
 
+    # Push overlay universes ('TAA ETFs', 'Thematic ETFs') to the bottom so
+    # drop_duplicates keeps the primary region (US/EM/Commodities/…) as the
+    # canonical row for tickers that appear in both.
+    OVERLAY_REGIONS = {'TAA ETFs', 'Thematic ETFs'}
     df = df.sort_values(
         by='Region',
-        key=lambda s: s.eq('TAA ETFs'),
+        key=lambda s: s.isin(OVERLAY_REGIONS),
         kind='stable',
     )
     df = df.drop_duplicates(subset=['CleanSymbol'], keep='first')
@@ -426,6 +430,7 @@ def generate_html(etf_data, correlations, generation_date):
           <button onclick="showCioSubTab('dm')" class="cio-subtab-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-cio-tab="dm">Developed Mkts</button>
           <button onclick="showCioSubTab('us')" class="cio-subtab-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-cio-tab="us">US</button>
           <button onclick="showCioSubTab('taa')" class="cio-subtab-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-cio-tab="taa">TAA</button>
+          <button onclick="showCioSubTab('thematic')" class="cio-subtab-btn px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700" data-cio-tab="thematic">Thematic</button>
         </div>
 
         <!-- Sub-tab content containers -->
@@ -435,6 +440,7 @@ def generate_html(etf_data, correlations, generation_date):
         <div id="cio-subtab-dm" class="cio-subtab-content hidden"></div>
         <div id="cio-subtab-us" class="cio-subtab-content hidden"></div>
         <div id="cio-subtab-taa" class="cio-subtab-content hidden"></div>
+        <div id="cio-subtab-thematic" class="cio-subtab-content hidden"></div>
 
       </div>
     </div>
@@ -1590,7 +1596,8 @@ def generate_html(etf_data, correlations, generation_date):
       em: {{ label: 'Emerging Markets', filter: e => e.regions.includes('Emerging Markets') || e.regions.includes('India') }},
       dm: {{ label: 'Developed Markets', filter: e => e.regions.includes('Developed Markets') }},
       us: {{ label: 'US', filter: e => e.regions.includes('US') }},
-      taa: {{ label: 'TAA', filter: e => e.regions.includes('TAA ETFs') }}
+      taa: {{ label: 'TAA', filter: e => e.regions.includes('TAA ETFs') }},
+      thematic: {{ label: 'Thematic', filter: e => e.regions.includes('Thematic ETFs') }}
     }};
 
     function showCioSubTab(tabId) {{
@@ -2266,7 +2273,7 @@ def generate_html(etf_data, correlations, generation_date):
       const unmapped = [];
       holdings.forEach(h => {{
         const c = h.instrument.country;
-        if (c && c !== 'TAA ETFs' && !(c in COUNTRY_TO_CIO_ID)) {{
+        if (c && c !== 'TAA ETFs' && c !== 'Thematic ETFs' && !(c in COUNTRY_TO_CIO_ID)) {{
           unmapped.push(h.symbol + ' (' + c + ')');
         }}
       }});
