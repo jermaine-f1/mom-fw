@@ -236,3 +236,20 @@ iShares MSCI Peru,EPU,Emerging Markets,ETF,ETF,FALSE
 Amazon.com,AMZN,US,Equities,US Tech,FALSE
 NVIDIA,NVDA,US,Equities,US Tech – Semiconductors,TRUE
 Microsoft,MSFT,US,Equities,US Tech,FALSE
+Global X Artificial Intelligence & Technology,AIQ,Thematic ETFs,ETF,AI Capex,FALSE
+VanEck Vectors Semiconductor,SMH.O,Thematic ETFs,ETF,AI Capex,TRUE
+Themes Generative AI Memory,DRAM,Thematic ETFs,ETF,AI Capex,TRUE
+Global X Cybersecurity,BUG,Thematic ETFs,ETF,AI Capex,FALSE
+ROBO Global Robotics & Automation,ROBO,Thematic ETFs,ETF,Industrial,FALSE
+Global X US Infrastructure Development,PAVE,Thematic ETFs,ETF,Industrial,FALSE
+Procure Space ETF,UFO,Thematic ETFs,ETF,Industrial,TRUE
+First Trust Nasdaq Clean Edge Smart Grid Infrastructure,GRID,Thematic ETFs,ETF,Power Grid,FALSE
+Global X Data Center & Digital Infrastructure REITs,DTCR,Thematic ETFs,ETF,Data Center,FALSE
+VanEck Uranium and Nuclear,NLR,Thematic ETFs,ETF,Nuclear,TRUE
+Sprott Uranium Miners,URNM,Thematic ETFs,ETF,Nuclear,TRUE
+iShares US Aerospace & Defense,ITA,Thematic ETFs,ETF,US Defense,FALSE
+Select STOXX Europe Aerospace & Defense,EUAD,Thematic ETFs,ETF,EU Defense,TRUE
+Bitwise Crypto Industry Innovators,BITQ,Thematic ETFs,ETF,Crypto,TRUE
+Global X FinTech,FINX,Thematic ETFs,ETF,Commodities/EM,FALSE
+Global X Copper Miners,COPX.K,Thematic ETFs,ETF,Commodities/EM,TRUE
+Global X Lithium,LIT,Thematic ETFs,ETF,Commodities/EM,FALSE
