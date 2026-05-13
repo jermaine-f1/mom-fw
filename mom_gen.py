@@ -1252,7 +1252,7 @@ def generate_html(etf_data, correlations, generation_date):
       const escape = (v) => {{
         if (v === null || v === undefined) return '';
         const s = String(v);
-        return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+        return /[",\\n\\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
       }};
       const rows = filteredETFs.map((etf, i) => [
         i + 1,
@@ -1270,7 +1270,7 @@ def generate_html(etf_data, correlations, generation_date):
         etf.maStatus + '/3',
         etf.tama.toFixed(2),
       ].map(escape).join(','));
-      const csv = headers.join(',') + '\n' + rows.join('\n');
+      const csv = headers.join(',') + '\\n' + rows.join('\\n');
       const blob = new Blob(['﻿' + csv], {{ type: 'text/csv;charset=utf-8;' }});
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
