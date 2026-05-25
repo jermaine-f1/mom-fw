@@ -1440,7 +1440,7 @@ def generate_html(etf_data, correlations, generation_date):
     }}
 
     function applySettings() {{
-      rankedETFs = etfUniverse.map(calculateScore).sort((a, b) => b.score - a.score);
+      rankedETFs = applyTAMA(etfUniverse.map(calculateScore)).sort((a, b) => b.score - a.score);
       applyFilters();
     }}
 
